@@ -2,12 +2,12 @@
 <CodeBlocks_project_file>
 	<FileVersion major="1" minor="6" />
 	<Project>
-		<Option title="Memorama" />
+		<Option title="Gatorama" />
 		<Option pch_mode="2" />
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="Debug">
-				<Option output="bin/Debug/Memorama" prefix_auto="1" extension_auto="1" />
+				<Option output="bin/Debug/Gatorama" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
@@ -16,7 +16,7 @@
 				</Compiler>
 			</Target>
 			<Target title="Release">
-				<Option output="bin/Release/Memorama" prefix_auto="1" extension_auto="1" />
+				<Option output="bin/Release/Gatorama" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Release/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
@@ -45,9 +45,13 @@
 		<Unit filename="Aleatorio.hpp" />
 		<Unit filename="Dibujo.cpp" />
 		<Unit filename="Dibujo.hpp" />
+		<Unit filename="Dificultad.cpp" />
+		<Unit filename="Dificultad.hpp" />
 		<Unit filename="Menu.cpp" />
 		<Unit filename="Menu.hpp" />
 		<Unit filename="Tema.hpp" />
+		<Unit filename="VistaTablero.cpp" />
+		<Unit filename="VistaTablero.hpp" />
 		<Unit filename="main.cpp" />
 		<Extensions />
 	</Project>

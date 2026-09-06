@@ -1,6 +1,6 @@
 /**
  * \file main.cpp
- * \brief Archivo principal para el memorama
+ * \brief Archivo principal de Gatorama
  * \author S&aacute;nchez Montoy, Jes&uacute;s Axel
  * \author Helleon Cardenas, Alba Rosa
  * \author Chenoweth Galaz, Ivana Lin
@@ -13,6 +13,7 @@
 #include "Menu.hpp"
 #include "Dibujo.hpp"
 #include "Tema.hpp"
+#include "VistaTablero.hpp"
 
 // ***********************************************
 // CONFIGURACION DE LA VENTANA
@@ -31,13 +32,18 @@ using namespace std;
 int main()
 {
     // InitWindow crea la ventana
-    InitWindow(PantallaAncho, PantallaAlto, "Memorama epico papus");
+    InitWindow(PantallaAncho, PantallaAlto, "Gatorama");
     SetTargetFPS(FPS); // Se establece el juego a 60 fps
 
     // Por defecto WindowShouldClose() tambien es verdadero al presionar ESC, no
     // solo al cerrar la ventana. Como nosotros queremos usar ESC para regresar al
     // menu, hay que quitarle ese trabajo. Sin esta linea, ESC cierra el juego.
     SetExitKey(KEY_NULL);
+
+    // Las imagenes se cargan aqui, ya con la ventana abierta: una textura vive en
+    // la memoria de la tarjeta de video, y esa memoria no existe antes de que
+    // InitWindow cree el contexto de OpenGL.
+    cargarTexturasTablero();
 
     Escena_Estado escenaActual = Escena_menu;
 
@@ -57,13 +63,20 @@ int main()
                 escenaActual = ActualizarMenu();
             break;
 
+            case Escena_juego:
+                // Todavia no hay partida: lo que vive aqui es el banco de pruebas
+                // del tablero, que sirve para medir a que tamano quedan las cartas
+                // en cada dificultad. Cuando exista el modelo, esta linea cambia
+                // por la partida de verdad y el resto de main.cpp no se entera.
+                escenaActual = ActualizarPruebaTablero();
+            break;
+
             // Estas pantallas todavia no existen, asi que por ahora se comportan
             // igual: ESC regresa al menu. Conforme cada una se implemente, saldra
             // de esta lista y tendra su propio case.
             case Escena_configuracion:
             case Escena_puntajes:
             case Escena_creditos:
-            case Escena_juego:
 
                 if(IsKeyPressed(KEY_ESCAPE)){
                     escenaActual = Escena_menu;
@@ -100,7 +113,7 @@ int main()
                 break;
 
                 case Escena_juego:
-                    dibujarPantallaPendiente("TABLERO DEL JUEGO");
+                    DibujarPruebaTablero();
                 break;
 
                 default: break;
@@ -108,6 +121,10 @@ int main()
 
         EndDrawing();
     }
+
+    // Y se liberan antes de cerrar, por la misma razon al reves: despues de
+    // CloseWindow ya no hay a quien devolverle esa memoria.
+    descargarTexturasTablero();
 
     CloseWindow(); // Cierra la ventana
 

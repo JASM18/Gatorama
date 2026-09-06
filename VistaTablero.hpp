@@ -1,0 +1,155 @@
+/**
+ * \file VistaTablero.hpp
+ * \brief Acomodo y dibujo del tablero de cartas en pantalla.
+ * \author S&aacute;nchez Montoy, Jes&uacute;s Axel
+ * \author Helleon Cardenas, Alba Rosa
+ * \author Chenoweth Galaz, Ivana Lin
+ * \author Dur&oacute;n Urbina, &Aacute;ngel Daniel
+ * \date 06/09/2026
+ *
+ * Este m&oacute;dulo es **vista**: piensa en p&iacute;xeles, no en reglas. No sabe qu&eacute; gato
+ * trae cada carta ni de qui&eacute;n es el turno; solo sabe cu&aacute;ntas casillas hay y
+ * d&oacute;nde cae cada una. El modelo del juego se le pasar&aacute; m&aacute;s adelante.
+ */
+
+#ifndef VISTATABLERO_HPP_INCLUDED
+#define VISTATABLERO_HPP_INCLUDED
+
+#include "raylib.h"
+#include "Menu.hpp"
+
+/**
+ * \brief Resultado de acomodar una cuadr&iacute;cula de cartas dentro de un &aacute;rea.
+ *
+ * Se calcula una vez por fotograma y de &eacute;l salen todas las posiciones. Guardarlo
+ * en vez de recalcular carta por carta evita que dos partes del c&oacute;digo lleguen a
+ * cuentas distintas.
+ */
+struct DisenoTablero {
+    int   filas;        ///< Renglones de la cuadr&iacute;cula
+    int   columnas;     ///< Cartas por renglon
+    float anchoCarta;   ///< Ancho de una carta en p&iacute;xeles
+    float altoCarta;    ///< Alto de una carta en p&iacute;xeles
+    float separacion;   ///< Hueco entre dos cartas vecinas, en p&iacute;xeles
+    float pasoX;        ///< Cu&aacute;nto avanzar en X de una carta a la siguiente
+    float pasoY;        ///< Cu&aacute;nto avanzar en Y de un rengl&oacute;n al siguiente
+    float origenX;      ///< Esquina izquierda de la carta (0,0)
+    float origenY;      ///< Esquina superior de la carta (0,0)
+};
+
+/**
+ * \brief El &aacute;rea de la ventana donde cabe el tablero.
+ *
+ * Descuenta el espacio de arriba (marcador y reloj) y el de abajo (ayudas), para
+ * que el tablero nunca se encime con la interfaz.
+ *
+ * \return Rect&aacute;ngulo disponible para las cartas.
+ */
+Rectangle areaDelTablero();
+
+/**
+ * \brief Calcula d&oacute;nde y de qu&eacute; tama&ntilde;o van las cartas dentro de un &aacute;rea.
+ *
+ * Reparte el &aacute;rea en celdas iguales y mete la carta m&aacute;s grande que quepa en una
+ * celda **respetando su forma**. El lado que se queda corto es el que manda: por eso
+ * un tablero ancho y bajo da cartas limitadas por el alto, y uno alto y angosto las
+ * limita por el ancho.
+ *
+ * \param filas           Renglones de la cuadr&iacute;cula (mayor que cero).
+ * \param columnas        Cartas por rengl&oacute;n (mayor que cero).
+ * \param area            Rect&aacute;ngulo de pantalla donde debe caber todo.
+ * \param relacionAspecto Ancho dividido entre alto de la carta (0.6667 para 2:3, 1.0 para cuadrada).
+ * \return El acomodo ya resuelto.
+ */
+DisenoTablero calcularDiseno(int filas, int columnas, Rectangle area, float relacionAspecto);
+
+/**
+ * \brief D&oacute;nde queda una carta concreta de la cuadr&iacute;cula.
+ *
+ * \param diseno  Acomodo devuelto por calcularDiseno().
+ * \param fila    Rengl&oacute;n de la carta, empezando en cero.
+ * \param columna Columna de la carta, empezando en cero.
+ * \return Rect&aacute;ngulo de esa carta en coordenadas de pantalla.
+ */
+Rectangle rectanguloDeCarta(const DisenoTablero& diseno, int fila, int columna);
+
+/**
+ * \brief Qu&eacute; carta est&aacute; debajo de un punto de la pantalla.
+ *
+ * Es lo que convierte un clic del rat&oacute;n en una carta del juego. Se hace aqu&iacute;, en
+ * la vista, porque es una pregunta de p&iacute;xeles: el modelo no sabe d&oacute;nde se dibuj&oacute;
+ * nada.
+ *
+ * \param diseno Acomodo devuelto por calcularDiseno().
+ * \param punto  Posici&oacute;n en pantalla, normalmente GetMousePosition().
+ * \return &Iacute;ndice de la carta (fila * columnas + columna), o -1 si el punto cay&oacute; en un hueco.
+ */
+int indiceCartaEnPunto(const DisenoTablero& diseno, Vector2 punto);
+
+/**
+ * \brief Dibuja el dorso de una carta (la cara oculta).
+ *
+ * \param rec       D&oacute;nde va, normalmente de rectanguloDeCarta().
+ * \param resaltada Verdadero si el rat&oacute;n est&aacute; encima; se dibuja distinto para que
+ *                  el jugador vea qu&eacute; va a escoger antes de hacer clic.
+ */
+void dibujarDorsoCarta(Rectangle rec, bool resaltada);
+
+/**
+ * \brief Carga las ilustraciones de los gatos.
+ *
+ * **Tiene que llamarse despu&eacute;s de InitWindow().** Una textura vive en la memoria de
+ * la tarjeta de video, y esa memoria no existe hasta que hay una ventana con su
+ * contexto de OpenGL. Llamarla antes devuelve una textura vac&iacute;a sin avisar.
+ *
+ * Los archivos que falten simplemente se saltan: el juego se puede seguir probando
+ * con las ilustraciones que s&iacute; existan, o sin ninguna.
+ */
+void cargarTexturasTablero();
+
+/**
+ * \brief Cu&aacute;ntas ilustraciones se lograron cargar.
+ * \return N&uacute;mero de im&aacute;genes disponibles; cero si no se carg&oacute; ninguna.
+ */
+int numeroDeIlustraciones();
+
+/**
+ * \brief Libera las ilustraciones.
+ *
+ * **Tiene que llamarse antes de CloseWindow()**, por la misma raz&oacute;n: despu&eacute;s de
+ * cerrar la ventana ya no hay a qui&eacute;n devolverle esa memoria.
+ */
+void descargarTexturasTablero();
+
+/**
+ * \brief Dibuja la cara descubierta de una carta, con su ilustraci&oacute;n.
+ *
+ * La imagen se ajusta al rect&aacute;ngulo que se le d&eacute;. Si no hay ilustraciones cargadas
+ * dibuja un relleno liso, para que el juego se pueda probar sin arte.
+ *
+ * \param rec                D&oacute;nde va, normalmente de rectanguloDeCarta().
+ * \param resaltada          Verdadero si el rat&oacute;n est&aacute; encima.
+ * \param indiceIlustracion  Qu&eacute; gato dibujar. Se toma el residuo entre el n&uacute;mero de
+ *                           ilustraciones cargadas, as&iacute; que cualquier entero es v&aacute;lido.
+ */
+void dibujarCaraCarta(Rectangle rec, bool resaltada, int indiceIlustracion);
+
+//***********************************************
+// BANCO DE PRUEBAS (TEMPORAL)
+//***********************************************
+// Las dos funciones de abajo son una pantalla de medici&oacute;n, no el juego. Sirven
+// para ver los tres tableros a escala real y decidir a qu&eacute; resoluci&oacute;n se dibujan
+// los gatos. Se borran cuando la pantalla de juego exista de verdad.
+
+/**
+ * \brief Procesa la entrada del banco de pruebas (una llamada por fotograma).
+ * \return La escena a la que hay que cambiar, o Escena_juego si seguimos aqu&iacute;.
+ */
+Escena_Estado ActualizarPruebaTablero();
+
+/**
+ * \brief Dibuja el banco de pruebas: el tablero y las medidas en p&iacute;xeles.
+ */
+void DibujarPruebaTablero();
+
+#endif // VISTATABLERO_HPP_INCLUDED

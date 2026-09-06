@@ -26,4 +26,11 @@ const Color COLOR_TEXTO     = { 166, 173, 200, 255 };   ///< Texto normal
 const Color COLOR_SELECCION = { 137, 180, 250, 255 };   ///< Opci&oacute;n resaltada del men&uacute;
 const Color COLOR_TENUE     = { 108, 112, 134, 255 };   ///< Ayudas y notas al pie
 
+// Colores de las cartas. El dorso es la cara oculta -la que se ve al empezar la
+// partida-; el borde la separa del fondo y el resaltado avisa cual carta se va a
+// escoger si se hace clic ahora.
+const Color COLOR_CARTA_DORSO = {  69,  71,  90, 255 };   ///< Cara oculta de la carta
+const Color COLOR_CARTA_BORDE = { 137, 180, 250, 255 };   ///< Contorno de la carta
+const Color COLOR_CARTA_HOVER = {  88,  91, 112, 255 };   ///< Carta bajo el puntero
+
 #endif // TEMA_HPP_INCLUDED

@@ -1,11 +1,11 @@
-# Memorama
+# Gatorama
 
 ![C++](https://img.shields.io/badge/C%2B%2B-17-blue.svg)
 ![raylib](https://img.shields.io/badge/raylib-6.0-orange.svg)
 ![Windows](https://img.shields.io/badge/Windows-Supported-blue.svg)
 ![Code::Blocks](https://img.shields.io/badge/Code%3A%3ABlocks-25.03-green.svg)
 
-Juego de memorama desarrollado en **C++ con raylib**.
+Juego de memorama con temática de gatitos, desarrollado en **C++ con raylib**.
 
 ## Requisitos del sistema
 
@@ -32,22 +32,23 @@ codeblocks-25.03mingw-setup.exe
 ### 2. Clonar y abrir
 
 ```bash
-git clone https://github.com/JASM18/Memorama.git
-cd Memorama
+git clone https://github.com/JASM18/Gatorama.git
+cd Gatorama
 ```
 
-Abre `Memorama.cbp` con Code::Blocks y presiona **F9** (Build and run). Debería abrirse
+Abre `Gatorama.cbp` con Code::Blocks y presiona **F9** (Build and run). Debería abrirse
 una ventana del juego.
 
 ## Estructura del proyecto
 
 ```
-memorama/
+gatorama/
 ├── libs/raylib/          Biblioteca raylib 6.0 (incluida a proposito)
 │   ├── include/          raylib.h, raymath.h, rlgl.h
 │   └── lib/              libraylib.a
+├── recursos/             Ilustraciones de las cartas (gato01.png, gato02.png...)
 ├── main.cpp              Punto de entrada
-├── Memorama.cbp          Proyecto de Code::Blocks (SI se sube al repo)
+├── Gatorama.cbp          Proyecto de Code::Blocks (SI se sube al repo)
 └── README.md
 ```
 
