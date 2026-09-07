@@ -39,19 +39,44 @@ static Rectangle botonVolver()
                       GetScreenHeight() - 130.0f, 220.0f, 52.0f);
 }
 
+// Dos controles: el volumen y el boton de volver.
+const int ENFOQUE_VOLUMEN = 0;
+const int NUM_CONTROLES   = 2;
+
+static int enfoque = ENFOQUE_VOLUMEN;
+
 //***********************************************
 // PANTALLA
 //***********************************************
 
 Escena_Estado ActualizarOpciones()
 {
-    // El volumen se atiende antes que el boton. Si se hiciera al reves, soltar el
-    // raton sobre la barra tras arrastrarla podria contar como clic en lo que
-    // quedara debajo.
+    if(ratonEncima(barraVolumen())) enfoque = ENFOQUE_VOLUMEN;
+    if(ratonEncima(botonVolver()))  enfoque = 1;
+
+    bool enVolumen = (enfoque == ENFOQUE_VOLUMEN);
+
+    // Sobre el volumen, izquierda y derecha ajustan en vez de cambiar de control.
+    enfoque = moverEnfoque(enfoque, NUM_CONTROLES, !enVolumen);
+
+    if(enVolumen){
+        // Por segundo y no por fotograma, para que suba igual de rapido en
+        // cualquier maquina.
+        float paso = 0.6f * GetFrameTime();
+
+        if(IsKeyDown(KEY_RIGHT)) FijarVolumenMusica(VolumenMusica() + paso);
+        if(IsKeyDown(KEY_LEFT))  FijarVolumenMusica(VolumenMusica() - paso);
+    }
+
+    // El volumen del raton se atiende antes que el boton. Si se hiciera al reves,
+    // soltar el raton sobre la barra tras arrastrarla podria contar como clic en
+    // lo que quedara debajo.
     FijarVolumenMusica(valorDeslizador(barraVolumen(), VolumenMusica()));
 
     if(IsKeyPressed(KEY_ESCAPE))    return Escena_menu;
     if(botonClicado(botonVolver())) return Escena_menu;
+
+    if(enfoqueActivado() && enfoque == 1) return Escena_menu;
 
     return Escena_opciones;
 }
@@ -74,6 +99,8 @@ void DibujarOpciones()
 
     dibujarDeslizador(barra, VolumenMusica());
 
+    if(enfoque == ENFOQUE_VOLUMEN) dibujarAnilloEnfoque(barra);
+
     DrawText(TextFormat("%d%%", (int)(VolumenMusica() * 100.0f + 0.5f)),
              (int)(barra.x + barra.width + 24.0f), (int)(barra.y - 6.0f),
              24, COLOR_SELECCION);
@@ -82,4 +109,6 @@ void DibujarOpciones()
                          (int)(panel.y + panel.height - 50.0f), 16, COLOR_TENUE);
 
     dibujarBoton(botonVolver(), "Volver al menu", false);
+
+    if(enfoque == 1) dibujarAnilloEnfoque(botonVolver());
 }

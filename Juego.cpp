@@ -137,6 +137,10 @@ void ReiniciarPartida()
 
     partida->Reiniciar();
 
+    // La pausa se cierra tambien. Reiniciar significa volver a jugar: dejar el
+    // panel abierto encima del tablero nuevo obligaba a cerrarlo a mano.
+    enPausa           = false;
+
     esperaOcultar     = 0.0f;
     cartaResaltada    = -1;
     enInstrucciones   = false;
@@ -154,6 +158,44 @@ void LiberarPartida()
 //***********************************************
 // ACTUALIZAR
 //***********************************************
+
+/**
+ * \brief Mueve la carta resaltada con las flechas del teclado.
+ *
+ * Se topa en los bordes en lugar de dar la vuelta: en un tablero de 3x10, saltar
+ * de la ultima carta a la primera desorienta m&aacute;s de lo que ayuda.
+ */
+static void moverConFlechas()
+{
+    int pasoX = 0;
+    int pasoY = 0;
+
+    if(IsKeyPressed(KEY_RIGHT)) pasoX =  1;
+    if(IsKeyPressed(KEY_LEFT))  pasoX = -1;
+    if(IsKeyPressed(KEY_DOWN))  pasoY =  1;
+    if(IsKeyPressed(KEY_UP))    pasoY = -1;
+
+    if(pasoX == 0 && pasoY == 0) return;
+
+    // La primera flecha estrena el cursor en la esquina, sin mover nada mas.
+    if(cartaResaltada < 0){
+        cartaResaltada = 0;
+        return;
+    }
+
+    const Tablero& t        = partida->ElTablero();
+    int            columnas = t.Columnas();
+
+    int fila    = cartaResaltada / columnas + pasoY;
+    int columna = cartaResaltada % columnas + pasoX;
+
+    if(fila < 0)              fila = 0;
+    if(fila >= t.Filas())     fila = t.Filas() - 1;
+    if(columna < 0)           columna = 0;
+    if(columna >= columnas)   columna = columnas - 1;
+
+    cartaResaltada = fila * columnas + columna;
+}
 
 Escena_Estado ActualizarJuego()
 {
@@ -193,6 +235,7 @@ Escena_Estado ActualizarJuego()
 
     if(IsKeyPressed(KEY_ESCAPE) || botonClicado(botonDePausa())){
         enPausa = true;
+        PrepararPausa();
         return Escena_juego;
     }
 
@@ -202,6 +245,7 @@ Escena_Estado ActualizarJuego()
         enPausa         = true;   // congela el reloj mientras lee
         enInstrucciones = true;
         ayudaDesdePausa = false;  // al cerrar se vuelve al tablero, no a la pausa
+        PrepararPausa();
         return Escena_juego;
     }
 
@@ -231,7 +275,15 @@ Escena_Estado ActualizarJuego()
     // se detiene sola cuando ya no quedan parejas.
     partida->CorrerReloj(GetFrameTime());
 
-    cartaResaltada = indiceCartaEnPunto(disenoActual(), GetMousePosition());
+    // El raton solo manda cuando de verdad se movio. Si se leyera cada fotograma,
+    // borraria en el acto la carta que el jugador acaba de elegir con las flechas.
+    Vector2 movimiento = GetMouseDelta();
+
+    if(movimiento.x != 0.0f || movimiento.y != 0.0f){
+        cartaResaltada = indiceCartaEnPunto(disenoActual(), GetMousePosition());
+    }
+
+    moverConFlechas();
 
     // Un par equivocado se queda a la vista y luego se tapa. Quien decide CUANDO
     // es esta pantalla; quien sabe QUE significa taparlo -romper la racha, pasar
@@ -246,7 +298,13 @@ Escena_Estado ActualizarJuego()
         return Escena_juego;
     }
 
-    if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && cartaResaltada >= 0){
+    // Un clic del raton y un Enter del teclado hacen exactamente lo mismo: voltear
+    // la carta resaltada. Por eso los dos caminos terminan en la misma llamada.
+    bool pidioVoltear = (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && cartaResaltada >= 0)
+                     || IsKeyPressed(KEY_ENTER)
+                     || IsKeyPressed(KEY_SPACE);
+
+    if(pidioVoltear && cartaResaltada >= 0){
 
         if(partida->Voltear(cartaResaltada) == Volteo_fallo){
             esperaOcultar = ESPERA_OCULTAR;
@@ -407,7 +465,7 @@ void DibujarJuego()
     if(partida->Terminada()){
         dibujarResultado();
     } else {
-        dibujarTextoCentrado("Clic para voltear una carta     ESC para pausar",
+        dibujarTextoCentrado("Clic o flechas y Enter para voltear     ESC para pausar",
                              GetScreenHeight() - 38, 18, COLOR_TENUE);
     }
 

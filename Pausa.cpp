@@ -35,6 +35,13 @@ static const AccionPausa ACCIONES_PAUSA[NUM_BOTONES_PAUSA] = {
     Pausa_menu
 };
 
+// Controles que recorre el teclado: el volumen es el 0 y los botones van del 1
+// en adelante. Se cuentan juntos porque las flechas los recorren como una lista.
+const int NUM_ENFOQUES_PAUSA = NUM_BOTONES_PAUSA + 1;
+const int ENFOQUE_VOLUMEN    = 0;
+
+static int enfoque = 1;   // arranca en Continuar
+
 static const float PANEL_ANCHO = 440.0f;
 static const float PANEL_ALTO  = 470.0f;
 
@@ -87,16 +94,50 @@ static Rectangle botonPausa(int indice)
 // VENTANA DE PAUSA
 //***********************************************
 
+void PrepararPausa()
+{
+    enfoque = 1;
+}
+
 AccionPausa ActualizarPausa()
 {
-    // El volumen se atiende antes que los botones. Si se hiciera al reves, soltar
-    // el raton sobre la barra despues de arrastrarla podria contar como clic en
-    // el boton que quedo debajo.
+    // El raton manda sobre el teclado: si el puntero esta encima de un control,
+    // ese toma el enfoque. Asi lo resaltado y lo que esta bajo el cursor no se
+    // contradicen en pantalla.
+    if(ratonEncima(barraVolumen())) enfoque = ENFOQUE_VOLUMEN;
+
+    for(int i = 0; i < NUM_BOTONES_PAUSA; i++){
+        if(ratonEncima(botonPausa(i))) enfoque = i + 1;
+    }
+
+    bool enVolumen = (enfoque == ENFOQUE_VOLUMEN);
+
+    // Sobre el volumen, izquierda y derecha ajustan en vez de cambiar de control.
+    enfoque = moverEnfoque(enfoque, NUM_ENFOQUES_PAUSA, !enVolumen);
+
+    if(enVolumen){
+        // Se usa IsKeyDown y no IsKeyPressed para poder dejar la flecha apretada.
+        // El paso va por segundo y no por fotograma, para que suba igual de rapido
+        // en cualquier maquina: asi tarda poco menos de dos segundos de extremo a
+        // extremo.
+        float paso = 0.6f * GetFrameTime();
+
+        if(IsKeyDown(KEY_RIGHT)) FijarVolumenMusica(VolumenMusica() + paso);
+        if(IsKeyDown(KEY_LEFT))  FijarVolumenMusica(VolumenMusica() - paso);
+    }
+
+    // El volumen del raton se atiende antes que los botones. Si se hiciera al
+    // reves, soltar el raton sobre la barra despues de arrastrarla podria contar
+    // como clic en el boton que quedo debajo.
     FijarVolumenMusica(valorDeslizador(barraVolumen(), VolumenMusica()));
 
     // La misma tecla que abre la pausa la cierra. Si ESC hiciera otra cosa aqui
     // -por ejemplo salir al menu- seria facil perder una partida sin querer.
     if(IsKeyPressed(KEY_ESCAPE)) return Pausa_continuar;
+
+    if(enfoqueActivado() && enfoque != ENFOQUE_VOLUMEN){
+        return ACCIONES_PAUSA[enfoque - 1];
+    }
 
     for(int i = 0; i < NUM_BOTONES_PAUSA; i++){
         if(botonClicado(botonPausa(i))) return ACCIONES_PAUSA[i];
@@ -133,6 +174,8 @@ void DibujarPausa()
 
     dibujarDeslizador(barra, VolumenMusica());
 
+    if(enfoque == ENFOQUE_VOLUMEN) dibujarAnilloEnfoque(barra);
+
     // El porcentaje va a la derecha de la barra, en el hueco que se le dejo.
     DrawText(TextFormat("%d%%", (int)(VolumenMusica() * 100.0f + 0.5f)),
              (int)(barra.x + barra.width + 22.0f),
@@ -144,8 +187,10 @@ void DibujarPausa()
         // Ninguno va marcado como seleccionado: son acciones, no opciones entre
         // las que se escoge una y se queda encendida.
         dibujarBoton(botonPausa(i), ETIQUETAS_PAUSA[i], false);
+
+        if(enfoque == i + 1) dibujarAnilloEnfoque(botonPausa(i));
     }
 
-    dibujarTextoCentrado("ESC para seguir jugando",
+    dibujarTextoCentrado("Flechas y Enter     ESC para seguir jugando",
                          (int)(panel.y + panel.height - 32.0f), 18, COLOR_TENUE);
 }

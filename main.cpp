@@ -60,6 +60,7 @@ int main()
     // la memoria de la tarjeta de video, y esa memoria no existe antes de que
     // InitWindow cree el contexto de OpenGL.
     cargarTexturasTablero();
+    CargarTexturasMenu();
     IniciarAudio();
 
     Escena_Estado escenaActual = Escena_menu;
@@ -197,6 +198,7 @@ int main()
     CerrarAudio();
     LiberarPartida();
     descargarTexturasTablero();
+    DescargarTexturasMenu();
 
     CloseWindow(); // Cierra la ventana
 

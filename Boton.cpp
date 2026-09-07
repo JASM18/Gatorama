@@ -128,3 +128,36 @@ void dibujarDeslizador(Rectangle rec, float valor)
 
     DrawCircleV(posicion, radio, COLOR_SELECCION);
 }
+
+//***********************************************
+// NAVEGACION POR TECLADO
+//***********************************************
+
+int moverEnfoque(int enfoque, int cuantos, bool conLaterales)
+{
+    if(cuantos <= 0) return 0;
+
+    int paso = 0;
+
+    if(IsKeyPressed(KEY_DOWN)) paso =  1;
+    if(IsKeyPressed(KEY_UP))   paso = -1;
+
+    if(conLaterales){
+        if(IsKeyPressed(KEY_RIGHT)) paso =  1;
+        if(IsKeyPressed(KEY_LEFT))  paso = -1;
+    }
+
+    return ((enfoque + paso) % cuantos + cuantos) % cuantos;
+}
+
+bool enfoqueActivado()
+{
+    return IsKeyPressed(KEY_ENTER);
+}
+
+void dibujarAnilloEnfoque(Rectangle rec)
+{
+    Rectangle anillo = { rec.x - 5.0f, rec.y - 5.0f, rec.width + 10.0f, rec.height + 10.0f };
+
+    DrawRectangleRoundedLinesEx(anillo, 0.25f, 8, 3.0f, COLOR_SELECCION);
+}

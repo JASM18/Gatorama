@@ -40,11 +40,10 @@ public:
     /**
      * \brief Tipo de la funci&oacute;n que decide qui&eacute;n va primero.
      *
-     * Es un **puntero a funci&oacute;n**: una variable que en vez de guardar un n&uacute;mero
-     * guarda *cu&aacute;l funci&oacute;n* usar. Gracias a eso no hacen falta dos mont&iacute;culos casi
-     * id&eacute;nticos, uno para puntos y otro para tiempos.
+     * Es el mismo tipo que define Puntaje.hpp. Gracias a &eacute;l no hacen falta ocho
+     * mont&iacute;culos casi id&eacute;nticos, uno por cada columna y direcci&oacute;n de la tabla.
      */
-    typedef bool (*Comparador)(const Puntaje&, const Puntaje&);
+    typedef ComparadorPuntaje Comparador;
 
     /**
      * \brief Se quiso insertar en un mont&iacute;culo que ya no tiene lugar.

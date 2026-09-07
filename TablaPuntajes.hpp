@@ -103,17 +103,21 @@ public:
      * Los mete todos a un mont&iacute;culo y saca los primeros. Ah&iacute; est&aacute; la ventaja: no
      * hace falta ordenar la lista completa para conocer los cinco de arriba.
      *
-     * \param destino        Arreglo donde dejarlos; debe tener lugar para \p cuantos.
-     * \param cuantos        Cu&aacute;ntos se quieren.
-     * \param esMejor        Funci&oacute;n que decide qui&eacute;n va primero.
-     * \param soloSolitario  Si es verdadero solo cuenta partidas de un jugador. Se
-     *                       usa para la tabla de tiempos: en dos jugadores el tiempo
-     *                       es de la partida y no de una persona, as&iacute; que meterlo
-     *                       ah&iacute; repetir&iacute;a el mismo tiempo con dos nombres.
+     * **Solo entran los registros de la categor&iacute;a que se pida.** Comparar un puntaje
+     * de F&aacute;cil contra uno de Dif&iacute;cil no dice nada: en Dif&iacute;cil hay 15 parejas y en
+     * F&aacute;cil 5, as&iacute; que el de Dif&iacute;cil gana siempre por el tama&ntilde;o del tablero y no por
+     * jugar mejor. Lo mismo entre solitario y 1 vs 1. Por eso la tabla se parte en
+     * categor&iacute;as en lugar de mezclarlo todo.
+     *
+     * \param destino     Arreglo donde dejarlos; debe tener lugar para \p cuantos.
+     * \param cuantos     Cu&aacute;ntos se quieren.
+     * \param esMejor     Funci&oacute;n que decide qui&eacute;n va primero.
+     * \param modo        Solo cuentan las partidas de este modo.
+     * \param dificultad  Solo cuentan las partidas de esta dificultad.
      * \return Cu&aacute;ntos se pudieron llenar; puede ser menos que \p cuantos.
      */
-    int Mejores(Puntaje* destino, int cuantos,
-                Monticulo::Comparador esMejor, bool soloSolitario) const;
+    int Mejores(Puntaje* destino, int cuantos, Monticulo::Comparador esMejor,
+                ModoJuego modo, Dificultad dificultad) const;
 
 private:
 

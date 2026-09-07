@@ -42,10 +42,11 @@ void Partida::LimpiarMarcadores()
     // del jugador que no existe es la clase de detalle que despues aparece en la
     // pantalla de resultados sin que nadie sepa de donde salio.
     for(int i = 0; i < MAX_JUGADORES; i++){
-        pares[i]       = 0;
-        puntos[i]      = 0;
-        racha[i]       = 0;
-        rachaMaxima[i] = 0;
+        pares[i]         = 0;
+        puntos[i]        = 0;
+        racha[i]         = 0;
+        rachaMaxima[i]   = 0;
+        tiempoJugador[i] = 0.0f;
     }
 }
 
@@ -140,6 +141,16 @@ void Partida::CorrerReloj(float segundos)
     if(Terminada()) return;
 
     tiempo += segundos;
+
+    // Y ademas al reloj de quien tiene el turno. Son dos cuentas y no una porque
+    // responden preguntas distintas: cuanto duro la partida, y cuanto se tardo
+    // cada quien. En solitario las dos dan lo mismo.
+    tiempoJugador[turno] += segundos;
+}
+
+float Partida::TiempoDe(int jugador) const
+{
+    return JugadorValido(jugador) ? tiempoJugador[jugador] : 0.0f;
 }
 
 //***********************************************

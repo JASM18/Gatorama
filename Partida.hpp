@@ -173,10 +173,26 @@ public:
     int Intentos() const;
 
     /**
-     * \brief Tiempo jugado.
-     * \return Segundos transcurridos.
+     * \brief Tiempo total de la partida.
+     * \return Segundos transcurridos desde que empez&oacute;.
      */
     float Tiempo() const;
+
+    /**
+     * \brief Tiempo que le corri&oacute; el reloj a un jugador.
+     *
+     * Cada jugador tiene su propio contador y solo avanza **mientras es su turno**.
+     * En solitario coincide con Tiempo(), porque el turno nunca cambia. En dos
+     * jugadores es lo &uacute;nico que permite comparar qui&eacute;n se tard&oacute; m&aacute;s: el reloj de la
+     * partida los mezcla a los dos.
+     *
+     * Los segundos que un par equivocado se queda a la vista tambi&eacute;n cuentan para
+     * quien lo destap&oacute;. Es lo justo: equivocarse cuesta tiempo.
+     *
+     * \param jugador 0 o 1.
+     * \return Sus segundos; 0 si el jugador no existe.
+     */
+    float TiempoDe(int jugador) const;
 
     /**
      * \brief Si ya se encontraron todas las parejas.
@@ -210,7 +226,8 @@ private:
     int     primera;                      ///< Carta destapada esperando pareja; -1 si ninguna
     int     segunda;                      ///< Segunda carta destapada; -1 si ninguna
     int     intentos;                     ///< Veces que se destaparon dos cartas
-    float   tiempo;                       ///< Segundos jugados
+    float   tiempo;                       ///< Segundos de toda la partida
+    float   tiempoJugador[MAX_JUGADORES]; ///< Segundos que le corri&oacute; a cada quien
 
     /**
      * \brief Deja los marcadores en cero, sin tocar el tablero.

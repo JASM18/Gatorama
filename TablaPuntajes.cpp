@@ -311,15 +311,18 @@ const Puntaje& TablaPuntajes::En(int indice) const
     return lista[indice];
 }
 
-int TablaPuntajes::Mejores(Puntaje* destino, int cuantos,
-                           Monticulo::Comparador esMejor, bool soloSolitario) const
+int TablaPuntajes::Mejores(Puntaje* destino, int cuantos, Monticulo::Comparador esMejor,
+                           ModoJuego modo, Dificultad dificultad) const
 {
     if(cuantos <= 0 || cantidad == 0) return 0;
 
     Monticulo monticulo(cantidad, esMejor);
 
     for(int i = 0; i < cantidad; i++){
-        if(soloSolitario && lista[i].modo != Modo_solitario) continue;
+        // El filtro va antes de insertar y no despues de sacar: meter al monticulo
+        // registros que van a descartarse solo lo hace mas grande y mas lento.
+        if(lista[i].modo != modo)             continue;
+        if(lista[i].dificultad != dificultad) continue;
 
         monticulo.Insertar(lista[i]);
     }

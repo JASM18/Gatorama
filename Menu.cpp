@@ -49,6 +49,74 @@ static const Escena_Estado DESTINOS[NUM_OPCIONES] = {
 static int opcionSeleccionada = 0;
 
 //***********************************************
+// ARTE DEL MENU
+//***********************************************
+
+// Las tres imagenes son opcionales: si falta alguna, esa parte se dibuja con
+// texto. Asi el juego sigue corriendo mientras el arte esta a medio hacer, y nadie
+// se queda bloqueado esperando a nadie.
+static const char* RUTA_FONDO  = "recursos/fondo.png";
+static const char* RUTA_TITULO = "recursos/titulo.png";
+static const char* RUTA_JUGAR  = "recursos/jugar.png";
+
+static Texture2D texturaFondo;
+static Texture2D texturaTitulo;
+static Texture2D texturaJugar;
+
+static bool hayFondo  = false;
+static bool hayTitulo = false;
+static bool hayJugar  = false;
+
+/**
+ * \brief Carga una imagen si existe y avisa si se pudo.
+ * \param ruta    Archivo a cargar.
+ * \param destino D&oacute;nde dejar la textura.
+ * \return Verdadero si qued&oacute; cargada.
+ */
+static bool cargarSiEsta(const char* ruta, Texture2D* destino)
+{
+    if(!FileExists(ruta)) return false;
+
+    *destino = LoadTexture(ruta);
+
+    if(!IsTextureValid(*destino)) return false;
+
+    // Filtro suave: la imagen se dibuja a su tamano exacto, pero si algun dia la
+    // ventana cambia de medida esto evita que se vea dentada.
+    SetTextureFilter(*destino, TEXTURE_FILTER_BILINEAR);
+
+    return true;
+}
+
+void CargarTexturasMenu()
+{
+    hayFondo  = cargarSiEsta(RUTA_FONDO,  &texturaFondo);
+    hayTitulo = cargarSiEsta(RUTA_TITULO, &texturaTitulo);
+    hayJugar  = cargarSiEsta(RUTA_JUGAR,  &texturaJugar);
+}
+
+void DescargarTexturasMenu()
+{
+    if(hayFondo)  UnloadTexture(texturaFondo);
+    if(hayTitulo) UnloadTexture(texturaTitulo);
+    if(hayJugar)  UnloadTexture(texturaJugar);
+
+    hayFondo  = false;
+    hayTitulo = false;
+    hayJugar  = false;
+}
+
+/**
+ * \brief Dibuja una textura centrada horizontalmente, a su tama&ntilde;o real.
+ * \param tex Textura a dibujar.
+ * \param y   Altura de su borde superior.
+ */
+static void dibujarCentrada(Texture2D tex, int y)
+{
+    DrawTexture(tex, (GetScreenWidth() - tex.width) / 2, y, WHITE);
+}
+
+//***********************************************
 // MENU PRINCIPAL
 //***********************************************
 
@@ -103,29 +171,46 @@ Escena_Estado ActualizarMenu()
 
 void DibujarMenu()
 {
-    dibujarTextoCentrado("GATORAMA", 110, 80, COLOR_TITULO);
+    // El fondo va primero, tapando el color liso que dejo ClearBackground.
+    if(hayFondo) DrawTexture(texturaFondo, 0, 0, WHITE);
+
+    if(hayTitulo) dibujarCentrada(texturaTitulo, 110);
+    else          dibujarTextoCentrado("GATORAMA", 110, 80, COLOR_TITULO);
 
     for(int i = 0; i < NUM_OPCIONES; i++){
 
         // Lo unico que distingue a la opcion resaltada es como se dibuja. No hay
         // que guardar ningun estado extra ni avisarle a nadie: se decide aqui,
         // en el momento de dibujar. Eso es el modo inmediato.
-        bool seleccionada = (i == opcionSeleccionada);
+        bool      seleccionada = (i == opcionSeleccionada);
+        Rectangle zona         = zonaOpcion(i);
 
-        Color color   = seleccionada ? COLOR_SELECCION : COLOR_TEXTO;
-        int   tamano  = seleccionada ? 38 : 32;
+        // La primera opcion ya tiene su imagen; las demas siguen siendo texto
+        // mientras el arte se termina.
+        if(i == 0 && hayJugar){
+            // Sin resaltar se dibuja un poco mas oscura. El tinte multiplica, asi
+            // que respeta la transparencia del PNG: no le pinta un rectangulo
+            // encima como haria un velo.
+            Color tinte = seleccionada ? WHITE : (Color){ 165, 165, 165, 255 };
 
-        // El texto se centra dentro de su zona clicable, para que lo que se ve y
-        // lo que responde al raton sean lo mismo.
-        Rectangle zona = zonaOpcion(i);
-        int       y    = (int)(zona.y + (zona.height - tamano) / 2.0f);
+            DrawTexture(texturaJugar, (int)zona.x, (int)zona.y, tinte);
+        } else {
+            Color color  = seleccionada ? COLOR_SELECCION : COLOR_TEXTO;
+            int   tamano = seleccionada ? 38 : 32;
 
-        // TextFormat es el sprintf de raylib: arma una cadena con formato.
-        const char* etiqueta = seleccionada
-                             ? TextFormat("> %s <", ETIQUETAS[i])
-                             : ETIQUETAS[i];
+            // El texto se centra dentro de su zona clicable, para que lo que se ve
+            // y lo que responde al raton sean lo mismo.
+            int y = (int)(zona.y + (zona.height - tamano) / 2.0f);
 
-        dibujarTextoCentrado(etiqueta, y, tamano, color);
+            const char* etiqueta = seleccionada
+                                 ? TextFormat("> %s <", ETIQUETAS[i])
+                                 : ETIQUETAS[i];
+
+            dibujarTextoCentrado(etiqueta, y, tamano, color);
+        }
+
+        // El anillo marca la opcion elegida igual sobre texto que sobre imagen.
+        if(seleccionada) dibujarAnilloEnfoque(zona);
     }
 
     dibujarTextoCentrado("Clic para elegir     o flechas y Enter", 640, 20, COLOR_TENUE);

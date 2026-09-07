@@ -41,6 +41,15 @@ enum AccionPausa {
 AccionPausa ActualizarPausa();
 
 /**
+ * \brief Deja la ventana lista para abrirse.
+ *
+ * Pone el enfoque del teclado en Continuar. Sin esto, al reabrir la pausa el
+ * enfoque se quedar&iacute;a donde lo dej&oacute; la vez pasada, que puede ser "Regresar al
+ * men&uacute;" -y un Enter distra&iacute;do abandonar&iacute;a la partida-.
+ */
+void PrepararPausa();
+
+/**
  * \brief Dibuja el velo oscuro y el panel de pausa.
  *
  * Se llama **despu&eacute;s** de dibujar el tablero, para que quede encima.

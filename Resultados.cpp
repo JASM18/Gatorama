@@ -23,6 +23,13 @@ static char       nombres[MAX_JUGADORES][LARGO_NOMBRE + 1];
 static int        pares[MAX_JUGADORES];
 static int        puntos[MAX_JUGADORES];
 static int        rachas[MAX_JUGADORES];
+static float      tiempos[MAX_JUGADORES];
+
+// Dos botones. El enfoque arranca en "Jugar otra vez" porque es lo que casi
+// siempre quiere el que acaba de jugar.
+const int NUM_CONTROLES = 2;
+
+static int enfoque = 0;
 
 static int        numJugadores = 1;
 static int        ganador      = 0;
@@ -32,6 +39,8 @@ static Dificultad dificultad   = Dificultad_facil;
 
 void PrepararResultados(const ConfigPartida& config, const Partida& partida)
 {
+    enfoque = 0;
+
     numJugadores = partida.NumJugadores();
     ganador      = partida.Ganador();
     intentos     = partida.Intentos();
@@ -47,7 +56,8 @@ void PrepararResultados(const ConfigPartida& config, const Partida& partida)
 
         pares[j]  = partida.ParesDe(j);
         puntos[j] = partida.PuntajeDe(j);
-        rachas[j] = partida.RachaMaximaDe(j);
+        rachas[j]  = partida.RachaMaximaDe(j);
+        tiempos[j] = partida.TiempoDe(j);
     }
 }
 
@@ -78,10 +88,19 @@ static Rectangle botonAlMenu()
 
 Escena_Estado ActualizarResultados()
 {
+    if(ratonEncima(botonOtraVez())) enfoque = 0;
+    if(ratonEncima(botonAlMenu()))  enfoque = 1;
+
+    enfoque = moverEnfoque(enfoque, NUM_CONTROLES, true);
+
     if(botonClicado(botonOtraVez())) return Escena_configuracion;
 
     if(IsKeyPressed(KEY_ESCAPE))    return Escena_menu;
     if(botonClicado(botonAlMenu())) return Escena_menu;
+
+    if(enfoqueActivado()){
+        return (enfoque == 0) ? Escena_configuracion : Escena_menu;
+    }
 
     return Escena_resultados;
 }
@@ -122,9 +141,13 @@ static void dibujarRenglonJugador(int jugador, int y)
 
     DrawText(nombres[jugador], x, y, 24, color);
 
-    DrawText(TextFormat("%d parejas", pares[jugador]),  x + 260, y, 24, color);
-    DrawText(TextFormat("%d puntos",  puntos[jugador]), x + 430, y, 24, COLOR_TEXTO);
-    DrawText(TextFormat("racha %d",   rachas[jugador]), x + 580, y, 24, COLOR_TENUE);
+    DrawText(TextFormat("%d parejas", pares[jugador]),  x + 220, y, 22, color);
+    DrawText(TextFormat("%d puntos",  puntos[jugador]), x + 370, y, 22, COLOR_TEXTO);
+    DrawText(TextFormat("racha %d",   rachas[jugador]), x + 500, y, 22, COLOR_TENUE);
+
+    // El reloj de cada quien, no el de la partida. En 1 vs 1 es el unico numero
+    // que permite decir quien se tardo mas: el de la partida los mezcla.
+    DrawText(comoReloj(tiempos[jugador]), x + 620, y, 22, COLOR_TENUE);
 }
 
 void DibujarResultados()
@@ -166,4 +189,6 @@ void DibujarResultados()
 
     dibujarBoton(botonOtraVez(), "Jugar otra vez", true);
     dibujarBoton(botonAlMenu(),  "Volver al menu", false);
+
+    dibujarAnilloEnfoque((enfoque == 0) ? botonOtraVez() : botonAlMenu());
 }

@@ -21,6 +21,19 @@
  * \return La escena a la que hay que cambiar, o Escena_menu si el usuario sigue
  *         navegando sin haber elegido nada.
  */
+/**
+ * \brief Carga las im&aacute;genes del men&uacute;: fondo, t&iacute;tulo y bot&oacute;n de jugar.
+ *
+ * Como todas las texturas, **despu&eacute;s de InitWindow()**. Las que falten se saltan y
+ * el men&uacute; se dibuja con texto, igual que antes de que existiera el arte.
+ */
+void CargarTexturasMenu();
+
+/**
+ * \brief Libera las im&aacute;genes del men&uacute;. **Antes de CloseWindow()**.
+ */
+void DescargarTexturasMenu();
+
 Escena_Estado ActualizarMenu();
 
 /**

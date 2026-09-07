@@ -77,4 +77,38 @@ float valorDeslizador(Rectangle rec, float valorActual);
  */
 void dibujarDeslizador(Rectangle rec, float valor);
 
+/**
+ * \brief Mueve un &iacute;ndice de enfoque con las flechas del teclado.
+ *
+ * El enfoque da la vuelta: del &uacute;ltimo control se pasa al primero. Se suma
+ * @p cuantos antes del residuo porque en C++ el residuo de un negativo es negativo.
+ *
+ * \param enfoque      &Iacute;ndice del control enfocado ahora.
+ * \param cuantos      Cu&aacute;ntos controles hay.
+ * \param conLaterales Si las flechas izquierda y derecha tambi&eacute;n mueven. Se pone en
+ *                     falso cuando esas dos hacen otra cosa, como ajustar el volumen.
+ * \return El &iacute;ndice nuevo, o el mismo si no se presion&oacute; ninguna flecha.
+ */
+int moverEnfoque(int enfoque, int cuantos, bool conLaterales);
+
+/**
+ * \brief Si se acaba de pedir activar el control enfocado.
+ *
+ * Solo Enter, a prop&oacute;sito: la barra espaciadora escribe un espacio en los campos de
+ * nombre, y una tecla que a veces activa y a veces escribe es una trampa.
+ *
+ * \return Verdadero en el fotograma en que se presion&oacute; Enter.
+ */
+bool enfoqueActivado();
+
+/**
+ * \brief Dibuja un anillo alrededor del control enfocado por teclado.
+ *
+ * Va por fuera del control y no encima, para que sirva igual sobre un bot&oacute;n, un
+ * campo de texto o una imagen con transparencia.
+ *
+ * \param rec Control enfocado.
+ */
+void dibujarAnilloEnfoque(Rectangle rec);
+
 #endif // BOTON_HPP_INCLUDED

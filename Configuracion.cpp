@@ -19,10 +19,22 @@
 // ACOMODO DE LA PANTALLA
 //***********************************************
 
-// Que campo de texto tiene el cursor. 0 es ninguno, 1 el primer nombre y 2 el
-// segundo. Se guarda aqui porque es estado de la pantalla, no de la partida: al
-// jugador no le importa y a ConfigPartida tampoco.
-static int campoConFoco = 0;
+// Los controles que recorre el teclado, en el orden en que se recorren.
+const int CTRL_SOLITARIO = 0;
+const int CTRL_MULTI     = 1;
+const int CTRL_FACIL     = 2;   // los tres niveles ocupan el 2, el 3 y el 4
+const int CTRL_NOMBRE1   = 5;
+const int CTRL_NOMBRE2   = 6;
+const int CTRL_INICIAR   = 7;
+const int NUM_CONTROLES  = 8;
+
+// Cual control tiene el enfoque. Tambien decide en que campo se escribe: si el
+// enfoque esta sobre un nombre, las letras van ahi. Un solo dato para las dos
+// cosas es lo que evita que el cursor parpadee en un campo y se escriba en otro.
+//
+// Arranca en Iniciar para que Enter siga arrancando la partida de inmediato, como
+// antes de que existieran las flechas.
+static int enfoque = CTRL_INICIAR;
 
 static Rectangle botonModo(int indice)
 {
@@ -105,47 +117,82 @@ void PrepararConfiguracion(ConfigPartida& config)
     // multijugador puestos, el siguiente arranca en un juego que no pidio.
     config = configPorDefecto();
 
-    campoConFoco = 0;
+    enfoque = CTRL_INICIAR;
+}
+
+/**
+ * \brief Mueve el enfoque con las flechas, saltandose lo que no esta en pantalla.
+ *
+ * En solitario no hay segundo nombre, as&iacute; que ese control se brinca en la
+ * direcci&oacute;n en la que se iba: parar el cursor en un campo invisible ser&iacute;a como
+ * escribir a ciegas.
+ *
+ * \param config Configuraci&oacute;n actual, para saber si el segundo nombre existe.
+ */
+static void moverEnfoqueConfiguracion(const ConfigPartida& config)
+{
+    int paso = 0;
+
+    if(IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_RIGHT)) paso =  1;
+    if(IsKeyPressed(KEY_UP)   || IsKeyPressed(KEY_LEFT))  paso = -1;
+
+    if(paso == 0) return;
+
+    do {
+        enfoque = (enfoque + paso + NUM_CONTROLES) % NUM_CONTROLES;
+    } while(config.modo == Modo_solitario && enfoque == CTRL_NOMBRE2);
 }
 
 Escena_Estado ActualizarConfiguracion(ConfigPartida& config)
 {
     if(IsKeyPressed(KEY_ESCAPE)) return Escena_menu;
 
-    // ---- Modo ----
-    if(botonClicado(botonModo(0))) config.modo = Modo_solitario;
-    if(botonClicado(botonModo(1))) config.modo = Modo_multijugador;
+    moverEnfoqueConfiguracion(config);
 
-    // ---- Dificultad ----
+    // ---- Clics: eligen y ademas se llevan el enfoque ----
+    // Que el clic mueva el enfoque evita el salto raro de picarle a Dificil con el
+    // raton y que la siguiente flecha continue desde donde estaba el teclado.
+    if(botonClicado(botonModo(0))){ config.modo = Modo_solitario;    enfoque = CTRL_SOLITARIO; }
+    if(botonClicado(botonModo(1))){ config.modo = Modo_multijugador; enfoque = CTRL_MULTI; }
+
     for(int i = 0; i < NUM_DIFICULTADES; i++){
-        if(botonClicado(botonDificultad(i))) config.dificultad = (Dificultad)i;
-    }
-
-    // ---- Foco de los campos de texto ----
-    // Un clic en cualquier otro lado quita el foco. Asi el cursor parpadeando
-    // siempre esta donde el jugador acaba de picar, y no en un campo olvidado.
-    if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-
-        if(ratonEncima(campoNombre(1))){
-            campoConFoco = 1;
-        } else if(config.modo == Modo_multijugador && ratonEncima(campoNombre(2))){
-            campoConFoco = 2;
-        } else {
-            campoConFoco = 0;
+        if(botonClicado(botonDificultad(i))){
+            config.dificultad = (Dificultad)i;
+            enfoque           = CTRL_FACIL + i;
         }
     }
 
-    // Al cambiar a solitario el segundo campo desaparece; si tenia el cursor hay
-    // que quitarselo o se seguiria escribiendo en un cuadro invisible.
-    if(config.modo == Modo_solitario && campoConFoco == 2) campoConFoco = 0;
+    if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
 
-    if(campoConFoco == 1) escribirEn(config.nombre1);
-    if(campoConFoco == 2) escribirEn(config.nombre2);
+        if(ratonEncima(campoNombre(1))){
+            enfoque = CTRL_NOMBRE1;
+        } else if(config.modo == Modo_multijugador && ratonEncima(campoNombre(2))){
+            enfoque = CTRL_NOMBRE2;
+        }
+    }
 
-    // ---- Iniciar ----
-    // Enter tambien arranca, como pedia el boceto. Funciona incluso escribiendo un
-    // nombre: terminar de escribir y darle Enter es lo que uno espera.
-    if(botonClicado(botonIniciar()) || IsKeyPressed(KEY_ENTER)) return Escena_juego;
+    // Al cambiar a solitario el segundo campo desaparece; si tenia el enfoque hay
+    // que moverlo o se seguiria escribiendo en un cuadro invisible.
+    if(config.modo == Modo_solitario && enfoque == CTRL_NOMBRE2) enfoque = CTRL_NOMBRE1;
+
+    // ---- Escribir ----
+    if(enfoque == CTRL_NOMBRE1) escribirEn(config.nombre1);
+    if(enfoque == CTRL_NOMBRE2) escribirEn(config.nombre2);
+
+    // ---- Enter ----
+    // Sobre una opcion, Enter la elige. Sobre un nombre o sobre Iniciar, arranca
+    // la partida: escribir el nombre y darle Enter es lo que uno espera.
+    if(IsKeyPressed(KEY_ENTER)){
+
+        if(enfoque == CTRL_SOLITARIO)  config.modo = Modo_solitario;
+        else if(enfoque == CTRL_MULTI) config.modo = Modo_multijugador;
+        else if(enfoque >= CTRL_FACIL && enfoque < CTRL_FACIL + NUM_DIFICULTADES){
+            config.dificultad = (Dificultad)(enfoque - CTRL_FACIL);
+        }
+        else return Escena_juego;
+    }
+
+    if(botonClicado(botonIniciar())) return Escena_juego;
 
     return Escena_configuracion;
 }
@@ -196,6 +243,9 @@ void DibujarConfiguracion(const ConfigPartida& config)
     dibujarBoton(botonModo(0), "Solitario",    config.modo == Modo_solitario);
     dibujarBoton(botonModo(1), "Multijugador", config.modo == Modo_multijugador);
 
+    if(enfoque == CTRL_SOLITARIO) dibujarAnilloEnfoque(botonModo(0));
+    if(enfoque == CTRL_MULTI)     dibujarAnilloEnfoque(botonModo(1));
+
     // ---- 2. Dificultad ----
     DrawText("2.  Dificultad", 80, 226, 22, COLOR_TEXTO);
 
@@ -204,6 +254,8 @@ void DibujarConfiguracion(const ConfigPartida& config)
         Rectangle             rec   = botonDificultad(i);
 
         dibujarBoton(rec, nivel.nombre, config.dificultad == (Dificultad)i);
+
+        if(enfoque == CTRL_FACIL + i) dibujarAnilloEnfoque(rec);
 
         // Debajo de cada boton, cuantas cartas trae. Es el dato que de verdad le
         // dice al jugador que tan larga va a ser la partida.
@@ -220,10 +272,10 @@ void DibujarConfiguracion(const ConfigPartida& config)
     DrawText(config.modo == Modo_multijugador ? "3.  Jugadores" : "3.  Jugador",
              80, 342, 22, COLOR_TEXTO);
 
-    dibujarCampo(campoNombre(1), config.nombre1, campoConFoco == 1);
+    dibujarCampo(campoNombre(1), config.nombre1, enfoque == CTRL_NOMBRE1);
 
     if(config.modo == Modo_multijugador){
-        dibujarCampo(campoNombre(2), config.nombre2, campoConFoco == 2);
+        dibujarCampo(campoNombre(2), config.nombre2, enfoque == CTRL_NOMBRE2);
     }
 
     // ---- Resumen ----
@@ -258,6 +310,8 @@ void DibujarConfiguracion(const ConfigPartida& config)
 
     dibujarBoton(botonIniciar(), "Iniciar", true);
 
-    dibujarTextoCentrado("ESC para volver al menu     ENTER para iniciar",
+    if(enfoque == CTRL_INICIAR) dibujarAnilloEnfoque(botonIniciar());
+
+    dibujarTextoCentrado("Flechas para moverte     ESC para volver     ENTER para iniciar",
                          GetScreenHeight() - 40, 18, COLOR_TENUE);
 }
