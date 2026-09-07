@@ -12,6 +12,7 @@
 #include "Menu.hpp"
 #include "Dibujo.hpp"
 #include "Boton.hpp"
+#include "Instrucciones.hpp"
 #include "Tema.hpp"
 
 //***********************************************
@@ -47,6 +48,23 @@ static const Escena_Estado DESTINOS[NUM_OPCIONES] = {
 // esto sea un modulo y no una variable global suelta. main.cpp no sabe -ni tiene
 // por que saber- cual opcion esta resaltada.
 static int opcionSeleccionada = 0;
+
+// Si la ventana de instrucciones esta abierta encima del menu. Es una bandera y no
+// una escena por lo mismo que la pausa: el menu se sigue viendo debajo.
+static bool enInstrucciones = false;
+
+/**
+ * \brief El bot&oacute;n de ayuda, arriba a la derecha.
+ *
+ * Mismo lugar y mismo tama&ntilde;o que el del tablero, para que sea el mismo bot&oacute;n en
+ * la cabeza de quien juega y no dos cosas parecidas en esquinas distintas.
+ *
+ * \return Su rect&aacute;ngulo en pantalla.
+ */
+static Rectangle botonDeAyuda()
+{
+    return rectangulo(GetScreenWidth() - 60.0f, 18.0f, 40.0f, 40.0f);
+}
 
 //***********************************************
 // ARTE DEL MENU
@@ -112,6 +130,19 @@ static Rectangle zonaOpcion(int indice)
 
 Escena_Estado ActualizarMenu()
 {
+    // Con las instrucciones abiertas, ellas se quedan con toda la entrada: ni las
+    // flechas mueven la opcion resaltada ni un clic elige nada de atras.
+    if(enInstrucciones){
+        if(ActualizarInstrucciones()) enInstrucciones = false;
+
+        return Escena_menu;
+    }
+
+    if(botonClicado(botonDeAyuda())){
+        enInstrucciones = true;
+        return Escena_menu;
+    }
+
     // IsKeyPressed es verdadero SOLO en el fotograma exacto en que la tecla baja.
     // Con IsKeyDown recorreriamos las 4 opciones antes de soltar la tecla, porque
     // el bucle da 60 vueltas por segundo y un toque normal dura varias.
@@ -185,4 +216,9 @@ void DibujarMenu()
     }
 
     dibujarTextoCentrado("Clic para elegir     o flechas y Enter", 640, 20, COLOR_TENUE);
+
+    dibujarBoton(botonDeAyuda(), "?", false);
+
+    // La ventana va hasta el final, para que quede encima de todo lo demas.
+    if(enInstrucciones) DibujarInstrucciones();
 }

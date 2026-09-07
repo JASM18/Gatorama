@@ -18,8 +18,6 @@
 #ifndef INSTRUCCIONES_HPP_INCLUDED
 #define INSTRUCCIONES_HPP_INCLUDED
 
-#include "ConfigPartida.hpp"
-
 /**
  * \brief Procesa la entrada de la ventana de instrucciones.
  *
@@ -30,8 +28,10 @@ bool ActualizarInstrucciones();
 /**
  * \brief Dibuja el velo y el panel de instrucciones.
  *
- * \param modo Modo de la partida; cambia el &uacute;ltimo rengl&oacute;n del texto.
+ * Muestra los dos modos a la vez, como el boceto. Antes el texto cambiaba seg&uacute;n el
+ * modo de la partida, pero desde el men&uacute; todav&iacute;a no hay partida de d&oacute;nde sacarlo
+ * &mdash; y ver los dos es justo lo que alguien quiere antes de elegir.
  */
-void DibujarInstrucciones(ModoJuego modo);
+void DibujarInstrucciones();
 
 #endif // INSTRUCCIONES_HPP_INCLUDED

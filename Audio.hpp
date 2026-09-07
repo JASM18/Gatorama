@@ -55,25 +55,37 @@ void ReproducirEvento();
  */
 void ReproducirVictoria();
 
-/**
- * \brief El volumen actual, que gobierna la m&uacute;sica **y** los efectos.
- *
- * Es uno solo a prop&oacute;sito: el deslizador dice "Volumen", no "M&uacute;sica", y bajarlo
- * tiene que callar el juego entero. Dos volumenes separados serian dos cosas que
- * se pueden desincronizar sin que nadie se de cuenta.
- *
- * \return Un valor de 0.0 (mudo) a 1.0 (m&aacute;ximo).
- */
-float VolumenGeneral();
+// Hay dos volumenes y no uno porque son dos cosas con usos distintos: la musica
+// acompana de fondo y los efectos avisan que algo paso. En un stand ruidoso lo
+// normal es querer la musica baja y los efectos altos, y con un solo control eso
+// no se puede.
 
 /**
- * \brief Cambia el volumen de la m&uacute;sica.
+ * \brief El volumen de la m&uacute;sica de fondo.
+ * \return Un valor de 0.0 (mudo) a 1.0 (m&aacute;ximo).
+ */
+float VolumenMusica();
+
+/**
+ * \brief Cambia el volumen de la m&uacute;sica de fondo.
  *
  * Valores fuera de rango se recortan, para que un deslizador mal calculado no
  * reviente el sonido.
  *
  * \param volumen De 0.0 a 1.0.
  */
-void FijarVolumenGeneral(float volumen);
+void FijarVolumenMusica(float volumen);
+
+/**
+ * \brief El volumen de los efectos.
+ * \return Un valor de 0.0 (mudo) a 1.0 (m&aacute;ximo).
+ */
+float VolumenEfectos();
+
+/**
+ * \brief Cambia el volumen de los efectos.
+ * \param volumen De 0.0 a 1.0.
+ */
+void FijarVolumenEfectos(float volumen);
 
 #endif // AUDIO_HPP_INCLUDED

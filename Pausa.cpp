@@ -35,15 +35,21 @@ static const AccionPausa ACCIONES_PAUSA[NUM_BOTONES_PAUSA] = {
     Pausa_menu
 };
 
-// Controles que recorre el teclado: el volumen es el 0 y los botones van del 1
-// en adelante. Se cuentan juntos porque las flechas los recorren como una lista.
-const int NUM_ENFOQUES_PAUSA = NUM_BOTONES_PAUSA + 1;
-const int ENFOQUE_VOLUMEN    = 0;
+// Las dos categorias de sonido, iguales que en la pantalla de Opciones.
+const int SONIDO_MUSICA  = 0;
+const int SONIDO_EFECTOS = 1;
+const int NUM_SONIDOS    = 2;
 
-static int enfoque = 1;   // arranca en Continuar
+static const char* NOMBRES_SONIDO[NUM_SONIDOS] = { "Musica", "SFX" };
+
+// Controles que recorre el teclado: primero las dos barras, luego los botones. Se
+// cuentan juntos porque las flechas los recorren como una sola lista.
+const int NUM_ENFOQUES_PAUSA = NUM_SONIDOS + NUM_BOTONES_PAUSA;
+
+static int enfoque = NUM_SONIDOS;   // arranca en Continuar
 
 static const float PANEL_ANCHO = 440.0f;
-static const float PANEL_ALTO  = 470.0f;
+static const float PANEL_ALTO  = 526.0f;
 
 /**
  * \brief El rect&aacute;ngulo del panel, centrado en la ventana.
@@ -60,14 +66,37 @@ static Rectangle panelPausa()
 }
 
 /**
- * \brief La barra de volumen dentro del panel.
+ * \brief La barra de una de las dos categor&iacute;as de sonido.
+ * \param cual SONIDO_MUSICA o SONIDO_EFECTOS.
  * \return Su rect&aacute;ngulo en pantalla.
  */
-static Rectangle barraVolumen()
+static Rectangle barraVolumen(int cual)
 {
     Rectangle panel = panelPausa();
 
-    return rectangulo(panel.x + 40.0f, panel.y + 122.0f, panel.width - 130.0f, 16.0f);
+    return rectangulo(panel.x + 40.0f, panel.y + 118.0f + cual * 62.0f,
+                      panel.width - 130.0f, 16.0f);
+}
+
+/**
+ * \brief El volumen de una categor&iacute;a.
+ * \param cual SONIDO_MUSICA o SONIDO_EFECTOS.
+ * \return Su volumen actual.
+ */
+static float volumenDe(int cual)
+{
+    return (cual == SONIDO_EFECTOS) ? VolumenEfectos() : VolumenMusica();
+}
+
+/**
+ * \brief Cambia el volumen de una categor&iacute;a.
+ * \param cual  SONIDO_MUSICA o SONIDO_EFECTOS.
+ * \param valor Nuevo volumen.
+ */
+static void fijarVolumenDe(int cual, float valor)
+{
+    if(cual == SONIDO_EFECTOS) FijarVolumenEfectos(valor);
+    else                       FijarVolumenMusica(valor);
 }
 
 /**
@@ -98,7 +127,7 @@ static Rectangle botonPausa(int indice)
     const float MARGEN  = 40.0f;
     const float ALTO    = 50.0f;
     const float SEPARA  = 14.0f;
-    const float PRIMERO = 178.0f;   // debajo del volumen
+    const float PRIMERO = 234.0f;   // debajo de las dos barras
 
     return rectangulo(panel.x + MARGEN,
                       panel.y + PRIMERO + indice * (ALTO + SEPARA),
@@ -112,7 +141,7 @@ static Rectangle botonPausa(int indice)
 
 void PrepararPausa()
 {
-    enfoque = 1;
+    enfoque = NUM_SONIDOS;   // el primer boton, que es Continuar
 }
 
 AccionPausa ActualizarPausa()
@@ -120,40 +149,44 @@ AccionPausa ActualizarPausa()
     // El raton manda sobre el teclado: si el puntero esta encima de un control,
     // ese toma el enfoque. Asi lo resaltado y lo que esta bajo el cursor no se
     // contradicen en pantalla.
-    if(ratonEncima(barraVolumen())) enfoque = ENFOQUE_VOLUMEN;
-
-    for(int i = 0; i < NUM_BOTONES_PAUSA; i++){
-        if(ratonEncima(botonPausa(i))) enfoque = i + 1;
+    for(int i = 0; i < NUM_SONIDOS; i++){
+        if(ratonEncima(barraVolumen(i))) enfoque = i;
     }
 
-    bool enVolumen = (enfoque == ENFOQUE_VOLUMEN);
+    for(int i = 0; i < NUM_BOTONES_PAUSA; i++){
+        if(ratonEncima(botonPausa(i))) enfoque = NUM_SONIDOS + i;
+    }
 
-    // Sobre el volumen, izquierda y derecha ajustan en vez de cambiar de control.
-    enfoque = moverEnfoque(enfoque, NUM_ENFOQUES_PAUSA, !enVolumen);
+    bool enBarra = (enfoque < NUM_SONIDOS);
 
-    if(enVolumen){
+    // Sobre una barra, izquierda y derecha ajustan en vez de cambiar de control.
+    enfoque = moverEnfoque(enfoque, NUM_ENFOQUES_PAUSA, !enBarra);
+
+    if(enBarra){
         // Se usa IsKeyDown y no IsKeyPressed para poder dejar la flecha apretada.
         // El paso va por segundo y no por fotograma, para que suba igual de rapido
         // en cualquier maquina: asi tarda poco menos de dos segundos de extremo a
         // extremo.
         float paso = 0.6f * GetFrameTime();
 
-        if(IsKeyDown(KEY_RIGHT)) FijarVolumenGeneral(VolumenGeneral() + paso);
-        if(IsKeyDown(KEY_LEFT))  FijarVolumenGeneral(VolumenGeneral() - paso);
+        if(IsKeyDown(KEY_RIGHT)) fijarVolumenDe(enfoque, volumenDe(enfoque) + paso);
+        if(IsKeyDown(KEY_LEFT))  fijarVolumenDe(enfoque, volumenDe(enfoque) - paso);
     }
 
-    // El volumen del raton se atiende antes que los botones. Si se hiciera al
-    // reves, soltar el raton sobre la barra despues de arrastrarla podria contar
-    // como clic en el boton que quedo debajo.
-    FijarVolumenGeneral(valorDeslizador(barraVolumen(), VolumenGeneral()));
+    // Las barras se atienden antes que los botones. Si se hiciera al reves, soltar
+    // el raton sobre una despues de arrastrarla podria contar como clic en el
+    // boton que quedo debajo.
+    for(int i = 0; i < NUM_SONIDOS; i++){
+        fijarVolumenDe(i, valorDeslizador(barraVolumen(i), volumenDe(i)));
+    }
 
     // La misma tecla que abre la pausa la cierra. Si ESC hiciera otra cosa aqui
     // -por ejemplo salir al menu- seria facil perder una partida sin querer.
     if(IsKeyPressed(KEY_ESCAPE))      return Pausa_continuar;
     if(botonClicado(botonCerrar()))   return Pausa_continuar;
 
-    if(enfoqueActivado() && enfoque != ENFOQUE_VOLUMEN){
-        return ACCIONES_PAUSA[enfoque - 1];
+    if(enfoqueActivado() && enfoque >= NUM_SONIDOS){
+        return ACCIONES_PAUSA[enfoque - NUM_SONIDOS];
     }
 
     for(int i = 0; i < NUM_BOTONES_PAUSA; i++){
@@ -186,20 +219,23 @@ void DibujarPausa()
              (int)(panel.y + 34.0f),
              tamano, COLOR_TITULO);
 
-    // ---- Volumen ----
-    Rectangle barra = barraVolumen();
+    // ---- Volumen: musica y efectos ----
+    for(int i = 0; i < NUM_SONIDOS; i++){
 
-    DrawText("Volumen", (int)barra.x, (int)(barra.y - 30.0f), 20, COLOR_TEXTO);
+        Rectangle barra = barraVolumen(i);
 
-    dibujarDeslizador(barra, VolumenGeneral());
+        DrawText(NOMBRES_SONIDO[i], (int)barra.x, (int)(barra.y - 28.0f), 20, COLOR_TEXTO);
 
-    if(enfoque == ENFOQUE_VOLUMEN) dibujarAnilloEnfoque(barra);
+        dibujarDeslizador(barra, volumenDe(i));
 
-    // El porcentaje va a la derecha de la barra, en el hueco que se le dejo.
-    dibujarDato(TextFormat("%d%%", (int)(VolumenGeneral() * 100.0f + 0.5f)),
-                (int)(barra.x + barra.width + 22.0f),
-                (int)(barra.y - 4.0f),
-                20, COLOR_TENUE);
+        if(enfoque == i) dibujarAnilloEnfoque(barra);
+
+        // El porcentaje va a la derecha de la barra, en el hueco que se le dejo.
+        dibujarDato(TextFormat("%d%%", (int)(volumenDe(i) * 100.0f + 0.5f)),
+                    (int)(barra.x + barra.width + 22.0f),
+                    (int)(barra.y - 4.0f),
+                    20, COLOR_TENUE);
+    }
 
     // ---- Botones ----
     for(int i = 0; i < NUM_BOTONES_PAUSA; i++){
@@ -207,7 +243,7 @@ void DibujarPausa()
         // las que se escoge una y se queda encendida.
         dibujarBoton(botonPausa(i), ETIQUETAS_PAUSA[i], false);
 
-        if(enfoque == i + 1) dibujarAnilloEnfoque(botonPausa(i));
+        if(enfoque == NUM_SONIDOS + i) dibujarAnilloEnfoque(botonPausa(i));
     }
 
     dibujarTextoCentrado("Flechas y Enter     ESC para seguir jugando",

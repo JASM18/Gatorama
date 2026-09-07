@@ -487,6 +487,6 @@ void DibujarJuego()
 
     // Las ventanas van hasta el final para que queden encima de todo lo demas, y
     // las instrucciones encima de la pausa.
-    if(enInstrucciones)  DibujarInstrucciones(configActual.modo);
+    if(enInstrucciones)  DibujarInstrucciones();
     else if(enPausa)     DibujarPausa();
 }

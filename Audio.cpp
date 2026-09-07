@@ -39,10 +39,11 @@ static int   numEventos = 0;
 static Sound victoria;
 static bool  hayVictoria = false;
 
-// Arranca en 60% y no en 100%: en un stand ruidoso la musica no debe taparle la
-// voz a quien esta explicando el juego. Subirla es un deslizador; bajarla cuando
-// ya esta gritando es tarde.
-static float volumen = 0.6f;
+// La musica arranca en 60% y no en 100%: en un stand ruidoso no debe taparle la
+// voz a quien esta explicando el juego. Los efectos arrancan mas alto porque su
+// trabajo es justamente hacerse oir por encima de ella.
+static float volumenMusica  = 0.6f;
+static float volumenEfectos = 0.8f;
 
 void IniciarAudio()
 {
@@ -62,7 +63,7 @@ void IniciarAudio()
         // justamente porque esta pensado para repetirse sin costura.
         musica.looping = true;
 
-        SetMusicVolume(musica, volumen);
+        SetMusicVolume(musica, volumenMusica);
         PlayMusicStream(musica);
     }
 
@@ -75,7 +76,7 @@ void IniciarAudio()
         Sound s = LoadSound(RUTAS_EVENTOS[i]);
         if(!IsSoundValid(s)) continue;
 
-        SetSoundVolume(s, volumen);
+        SetSoundVolume(s, volumenEfectos);
 
         eventos[numEventos] = s;
         numEventos++;
@@ -85,7 +86,7 @@ void IniciarAudio()
         victoria    = LoadSound(RUTA_VICTORIA);
         hayVictoria = IsSoundValid(victoria);
 
-        if(hayVictoria) SetSoundVolume(victoria, volumen);
+        if(hayVictoria) SetSoundVolume(victoria, volumenEfectos);
     }
 }
 
@@ -126,27 +127,47 @@ void CerrarAudio()
     if(IsAudioDeviceReady()) CloseAudioDevice();
 }
 
-float VolumenGeneral()
+/**
+ * \brief Recorta un volumen al rango que acepta raylib.
+ *
+ * Se hace aqui, en un solo lugar, en vez de confiar en que todos los que llamen
+ * manden un valor sano. Los deslizadores ya lo limitan, pero si manana alguien
+ * fija el volumen desde un archivo de configuracion mal escrito, esta guarda es la
+ * que evita el ruido.
+ *
+ * \param v Valor pedido.
+ * \return El mismo valor, ya dentro de 0.0 a 1.0.
+ */
+static float recortar(float v)
 {
-    return volumen;
+    if(v < 0.0f) return 0.0f;
+    if(v > 1.0f) return 1.0f;
+
+    return v;
 }
 
-void FijarVolumenGeneral(float nuevo)
+float VolumenMusica()
 {
-    // Se recorta aqui, en un solo lugar, en vez de confiar en que todos los que
-    // llamen manden un valor sano. El deslizador ya lo limita, pero si manana
-    // alguien fija el volumen desde un archivo de configuracion mal escrito, esta
-    // guarda es la que evita el ruido.
-    if(nuevo < 0.0f) nuevo = 0.0f;
-    if(nuevo > 1.0f) nuevo = 1.0f;
+    return volumenMusica;
+}
 
-    volumen = nuevo;
+void FijarVolumenMusica(float nuevo)
+{
+    volumenMusica = recortar(nuevo);
 
-    if(hayMusica) SetMusicVolume(musica, volumen);
+    if(hayMusica) SetMusicVolume(musica, volumenMusica);
+}
 
-    // Los efectos siguen el mismo volumen. Si no, bajarle al deslizador dejaria
-    // la musica muda y los clics a todo lo que dan.
-    for(int i = 0; i < numEventos; i++) SetSoundVolume(eventos[i], volumen);
+float VolumenEfectos()
+{
+    return volumenEfectos;
+}
 
-    if(hayVictoria) SetSoundVolume(victoria, volumen);
+void FijarVolumenEfectos(float nuevo)
+{
+    volumenEfectos = recortar(nuevo);
+
+    for(int i = 0; i < numEventos; i++) SetSoundVolume(eventos[i], volumenEfectos);
+
+    if(hayVictoria) SetSoundVolume(victoria, volumenEfectos);
 }

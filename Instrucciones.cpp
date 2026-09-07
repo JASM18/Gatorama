@@ -33,7 +33,7 @@ static const char* PASOS[NUM_PASOS] = {
 };
 
 static const float PANEL_ANCHO = 760.0f;
-static const float PANEL_ALTO  = 420.0f;
+static const float PANEL_ALTO  = 470.0f;
 
 static Rectangle panelInstrucciones()
 {
@@ -65,7 +65,7 @@ bool ActualizarInstrucciones()
     return false;
 }
 
-void DibujarInstrucciones(ModoJuego modo)
+void DibujarInstrucciones()
 {
     DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), COLOR_VELO);
 
@@ -82,17 +82,20 @@ void DibujarInstrucciones(ModoJuego modo)
 
     for(int i = 0; i < NUM_PASOS; i++){
         DrawText(PASOS[i], (int)panel.x + 44, y, 22, COLOR_TEXTO);
-        y += 40;
+        y += 36;
     }
 
-    // El ultimo renglon depende del modo. En solitario se habla del reloj; en dos
-    // jugadores todavia no se promete nada de turnos ni puntaje, porque el juego
-    // aun no los hace.
-    const char* nota = (modo == Modo_solitario)
-                     ? "El reloj corre mientras juegas. En pausa se detiene."
-                     : "Los dos jugadores comparten el tablero.";
+    // Los dos modos, uno debajo del otro. El rotulo va en color y la explicacion
+    // en texto normal, para que se distingan de un vistazo.
+    DrawText("Solitario", (int)panel.x + 44, y + 12, 20, COLOR_SELECCION);
+    DrawText("Juegas contra el reloj. Se detiene si pones pausa.",
+             (int)panel.x + 44, y + 38, 18, COLOR_TEXTO);
 
-    DrawText(nota, (int)panel.x + 44, y + 12, 20, COLOR_SELECCION);
+    DrawText("1 vs 1", (int)panel.x + 44, y + 74, 20, COLOR_SELECCION);
+    DrawText("Aciertas y sigues jugando; fallas y pasa el turno.",
+             (int)panel.x + 44, y + 100, 18, COLOR_TEXTO);
+    DrawText("Gana quien junte mas parejas, no quien tenga mas puntos.",
+             (int)panel.x + 44, y + 122, 18, COLOR_TEXTO);
 
     dibujarTextoCentrado("ESC o la tacha para cerrar",
                          (int)(panel.y + panel.height - 34.0f), 18, COLOR_TENUE);
