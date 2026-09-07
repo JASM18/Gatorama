@@ -101,9 +101,9 @@ void DibujarOpciones()
 
     if(enfoque == ENFOQUE_VOLUMEN) dibujarAnilloEnfoque(barra);
 
-    DrawText(TextFormat("%d%%", (int)(VolumenMusica() * 100.0f + 0.5f)),
-             (int)(barra.x + barra.width + 24.0f), (int)(barra.y - 6.0f),
-             24, COLOR_SELECCION);
+    dibujarDato(TextFormat("%d%%", (int)(VolumenMusica() * 100.0f + 0.5f)),
+                (int)(barra.x + barra.width + 24.0f), (int)(barra.y - 6.0f),
+                24, COLOR_SELECCION);
 
     dibujarTextoCentrado("Mas opciones cuando haya efectos de sonido",
                          (int)(panel.y + panel.height - 50.0f), 16, COLOR_TENUE);

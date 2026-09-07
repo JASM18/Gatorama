@@ -24,7 +24,8 @@ Rectangle areaDelTablero()
     // Se le quita a la ventana lo que ocupa la interfaz. Si manana el marcador
     // crece, se cambian estos tres numeros y el tablero se reacomoda solo: no hay
     // ninguna posicion de carta escrita a mano en ningun lado.
-    const float MARGEN_LATERAL  = 40.0f;
+    // 30 y no 40: en Dificil las diez columnas casi se desbordaban.
+    const float MARGEN_LATERAL  = 30.0f;
     const float ESPACIO_ARRIBA  = 140.0f;   // marcador, reloj y turno
     const float ESPACIO_ABAJO   = 55.0f;    // linea de ayuda
 
@@ -33,6 +34,21 @@ Rectangle areaDelTablero()
     area.y      = ESPACIO_ARRIBA;
     area.width  = GetScreenWidth()  - MARGEN_LATERAL * 2.0f;
     area.height = GetScreenHeight() - ESPACIO_ARRIBA - ESPACIO_ABAJO;
+
+    return area;
+}
+
+Rectangle areaDeCartas()
+{
+    // Cuanto se meten las cartas hacia adentro del tapete, por cada lado.
+    const float MARGEN_INTERIOR = 24.0f;
+
+    Rectangle area = areaDelTablero();
+
+    area.x      += MARGEN_INTERIOR;
+    area.y      += MARGEN_INTERIOR;
+    area.width  -= MARGEN_INTERIOR * 2.0f;
+    area.height -= MARGEN_INTERIOR * 2.0f;
 
     return area;
 }
@@ -64,6 +80,13 @@ DisenoTablero calcularDiseno(int filas, int columnas, Rectangle area, float rela
         // Sobra alto: el ancho es el limite.
         diseno.anchoCarta = dispAncho;
         diseno.altoCarta  = dispAncho / relacionAspecto;
+    }
+
+    // Paso 3b: aunque quepa mas grande, una carta no pasa de cierto alto. En Facil
+    // hay area de sobra para diez cartas, y sin tope salian desproporcionadas.
+    if(diseno.altoCarta > ALTO_MAXIMO_CARTA){
+        diseno.altoCarta  = ALTO_MAXIMO_CARTA;
+        diseno.anchoCarta = ALTO_MAXIMO_CARTA * relacionAspecto;
     }
 
     // Paso 4: el hueco que sobra puede ser distinto a lo ancho que a lo alto. Se
@@ -137,6 +160,13 @@ static const int   SEGMENTOS = 8;   // triangulos por esquina; con 8 ya se ve li
 // buscan. Subirlo no cuesta nada mientras no existan los archivos.
 const int MAX_GATOS = 24;
 
+// El tapete sobre el que se reparten las cartas. Mide lo mismo que
+// areaDelTablero(), asi que hoy se dibuja sin estirarse ni un pixel.
+static const char* RUTA_TABLERO = "recursos/tablero.png";
+
+static Texture2D texturaTablero;
+static bool      hayTablero = false;
+
 // gato00 es la contraportada: la cara que se ve cuando la carta esta boca abajo.
 // Va aparte de la lista de gatos porque no es una pareja, es el reverso de todas.
 static const char* RUTA_DORSO = "recursos/gato00.png";
@@ -152,6 +182,8 @@ static int       numTexturasCargadas = 0;
 void cargarTexturasTablero()
 {
     numTexturasCargadas = 0;
+
+    hayTablero = cargarTexturaSiEsta(RUTA_TABLERO, &texturaTablero);
 
     // El dorso primero: es el que se ve al empezar la partida.
     hayDorso = false;
@@ -206,6 +238,11 @@ int numeroDeIlustraciones()
 
 void descargarTexturasTablero()
 {
+    if(hayTablero){
+        UnloadTexture(texturaTablero);
+        hayTablero = false;
+    }
+
     if(hayDorso){
         UnloadTexture(texturaDorso);
         hayDorso = false;
@@ -216,48 +253,6 @@ void descargarTexturasTablero()
     }
 
     numTexturasCargadas = 0;
-}
-
-/**
- * \brief Redondea las esquinas de una ilustraci&oacute;n ya dibujada.
- *
- * La imagen es un rect&aacute;ngulo, as&iacute; que sus cuatro esquinas cuadradas asoman por
- * fuera del borde redondeado de la carta. Esto las tapa pintando encima, del color
- * del fondo, la rebanada que queda **entre el arco y la esquina cuadrada**: cuatro
- * sectores de anillo, uno por esquina.
- *
- * **Ojo:** funciona porque el fondo del juego es un color liso. El d&iacute;a que se ponga
- * una imagen de fondo detr&aacute;s del tablero, estos parches se van a notar y habr&aacute; que
- * recortar la textura de otra forma (una m&aacute;scara o un shader).
- *
- * \param rec Rect&aacute;ngulo de la carta que se acaba de dibujar.
- */
-static void redondearEsquinas(Rectangle rec)
-{
-    // El radio se calcula igual que raylib: el lado corto por la redondez, entre
-    // dos. Si no coincidiera, el parche no caeria justo sobre el arco del borde.
-    float ladoCorto = (rec.width < rec.height) ? rec.width : rec.height;
-    float radio     = ladoCorto * REDONDEZ / 2.0f;
-
-    // La esquina cuadrada esta a radio * raiz(2) del centro del arco, o sea a
-    // 1.414 radios. Con 1.6 el parche la rebasa con margen; lo que se pinte de mas
-    // cae fuera de la carta, sobre el fondo, y ahi no se nota.
-    float afuera = radio * 1.6f;
-
-    const int SEG = 12;   // suficiente para que el arco no se vea poligonal
-
-    Vector2 supIzq = { rec.x + radio,             rec.y + radio };
-    Vector2 supDer = { rec.x + rec.width - radio, rec.y + radio };
-    Vector2 infDer = { rec.x + rec.width - radio, rec.y + rec.height - radio };
-    Vector2 infIzq = { rec.x + radio,             rec.y + rec.height - radio };
-
-    // Los angulos van en grados, con el cero apuntando a la derecha y creciendo
-    // hacia abajo (la Y de la pantalla crece hacia abajo). Cada esquina es un
-    // cuarto de vuelta.
-    DrawRing(supIzq, radio, afuera, 180.0f, 270.0f, SEG, COLOR_FONDO);
-    DrawRing(supDer, radio, afuera, 270.0f, 360.0f, SEG, COLOR_FONDO);
-    DrawRing(infDer, radio, afuera,   0.0f,  90.0f, SEG, COLOR_FONDO);
-    DrawRing(infIzq, radio, afuera,  90.0f, 180.0f, SEG, COLOR_FONDO);
 }
 
 void dibujarDorsoCarta(Rectangle rec, bool resaltada)
@@ -277,7 +272,6 @@ void dibujarDorsoCarta(Rectangle rec, bool resaltada)
     Vector2   desfase = { 0.0f, 0.0f };
 
     DrawTexturePro(texturaDorso, origen, rec, desfase, 0.0f, WHITE);
-    redondearEsquinas(rec);
 
     // El resaltado ya no puede ser un color de relleno distinto: ahora hay una
     // imagen encima que lo taparia. Se le echa un velo blanco translucido, que
@@ -287,6 +281,20 @@ void dibujarDorsoCarta(Rectangle rec, bool resaltada)
     }
 
     DrawRectangleRoundedLinesEx(rec, REDONDEZ, SEGMENTOS, grosor, COLOR_CARTA_BORDE);
+}
+
+void dibujarFondoTablero()
+{
+    if(!hayTablero) return;
+
+    Rectangle area   = areaDelTablero();
+    Rectangle origen = { 0.0f, 0.0f, (float)texturaTablero.width, (float)texturaTablero.height };
+    Vector2   desfase = { 0.0f, 0.0f };
+
+    // Se ajusta al area en vez de dibujarse a su tamano real. Hoy dan lo mismo
+    // -la imagen mide 1200x525, igual que el area-, pero si alguien cambia los
+    // margenes el tapete la sigue en vez de dejar una franja sin cubrir.
+    DrawTexturePro(texturaTablero, origen, area, desfase, 0.0f, WHITE);
 }
 
 void dibujarCaraCarta(Rectangle rec, bool resaltada, int indiceIlustracion)
@@ -316,9 +324,5 @@ void dibujarCaraCarta(Rectangle rec, bool resaltada, int indiceIlustracion)
     Vector2   desfase = { 0.0f, 0.0f };
 
     DrawTexturePro(tex, origen, rec, desfase, 0.0f, WHITE);
-
-    // Primero se recortan las esquinas cuadradas de la imagen y luego se pinta el
-    // borde encima, para que el borde quede limpio y no lo tape el parche.
-    redondearEsquinas(rec);
     DrawRectangleRoundedLinesEx(rec, REDONDEZ, SEGMENTOS, grosor, COLOR_CARTA_BORDE);
 }

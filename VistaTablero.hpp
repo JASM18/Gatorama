@@ -30,6 +30,15 @@ const float ALTO_ARTE  = 480.0f;   ///< Alto de las ilustraciones, en p&iacute;x
 const float RELACION_CARTA = ANCHO_ARTE / ALTO_ARTE;
 
 /**
+ * \brief Alto m&aacute;ximo de una carta en pantalla, en p&iacute;xeles.
+ *
+ * Sin este tope, en F&aacute;cil las diez cartas se reparten un &aacute;rea enorme y salen
+ * gigantes. El tope solo muerde ah&iacute;: en Normal y en Dif&iacute;cil las cartas ya son m&aacute;s
+ * chicas porque tienen que caber m&aacute;s.
+ */
+const float ALTO_MAXIMO_CARTA = 200.0f;
+
+/**
  * \brief Resultado de acomodar una cuadr&iacute;cula de cartas dentro de un &aacute;rea.
  *
  * Se calcula una vez por fotograma y de &eacute;l salen todas las posiciones. Guardarlo
@@ -57,6 +66,20 @@ struct DisenoTablero {
  * \return Rect&aacute;ngulo disponible para las cartas.
  */
 Rectangle areaDelTablero();
+
+/**
+ * \brief El &aacute;rea, ya metida hacia adentro, donde se reparten las cartas.
+ *
+ * El tapete trae su propio marco dibujado, as&iacute; que las cartas no pueden usarlo
+ * completo: se meten un poco para no encimarse con &eacute;l. Sin este respiro, en Dif&iacute;cil
+ * la primera y la &uacute;ltima columna quedaban pegadas al borde de la imagen.
+ *
+ * Ensanchar el tapete solo no bastaba: las cartas crecen con &eacute;l y vuelven a
+ * pegarse. Lo que da aire es este margen de adentro.
+ *
+ * \return Rect&aacute;ngulo disponible para las cartas.
+ */
+Rectangle areaDeCartas();
 
 /**
  * \brief Calcula d&oacute;nde y de qu&eacute; tama&ntilde;o van las cartas dentro de un &aacute;rea.
@@ -117,6 +140,15 @@ void dibujarDorsoCarta(Rectangle rec, bool resaltada);
  * con las ilustraciones que s&iacute; existan, o sin ninguna.
  */
 void cargarTexturasTablero();
+
+/**
+ * \brief Dibuja el tapete del tablero, si hay imagen.
+ *
+ * Va **antes** que las cartas, porque es el fondo sobre el que se reparten. Cubre
+ * exactamente areaDelTablero(); si no hay imagen no dibuja nada y el tablero se ve
+ * sobre el fondo de la pantalla, como antes.
+ */
+void dibujarFondoTablero();
 
 /**
  * \brief Cu&aacute;ntas ilustraciones se lograron cargar.

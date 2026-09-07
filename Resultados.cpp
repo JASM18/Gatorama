@@ -139,15 +139,15 @@ static void dibujarRenglonJugador(int jugador, int y)
 
     Color color = esElQue ? COLOR_BOTON_ACTIVO : COLOR_TEXTO;
 
-    DrawText(nombres[jugador], x, y, 24, color);
+    dibujarDato(nombres[jugador], x, y, 24, color);
 
-    DrawText(TextFormat("%d parejas", pares[jugador]),  x + 220, y, 22, color);
-    DrawText(TextFormat("%d puntos",  puntos[jugador]), x + 370, y, 22, COLOR_TEXTO);
-    DrawText(TextFormat("racha %d",   rachas[jugador]), x + 500, y, 22, COLOR_TENUE);
+    dibujarDato(TextFormat("%d parejas", pares[jugador]),  x + 220, y, 22, color);
+    dibujarDato(TextFormat("%d puntos",  puntos[jugador]), x + 370, y, 22, COLOR_TEXTO);
+    dibujarDato(TextFormat("racha %d",   rachas[jugador]), x + 500, y, 22, COLOR_TENUE);
 
     // El reloj de cada quien, no el de la partida. En 1 vs 1 es el unico numero
     // que permite decir quien se tardo mas: el de la partida los mezcla.
-    DrawText(comoReloj(tiempos[jugador]), x + 620, y, 22, COLOR_TENUE);
+    dibujarDato(comoReloj(tiempos[jugador]), x + 620, y, 22, COLOR_TENUE);
 }
 
 void DibujarResultados()
@@ -157,7 +157,7 @@ void DibujarResultados()
         dibujarTextoCentrado("PARTIDA TERMINADA", 60, 40, COLOR_TITULO);
     }
     else if(ganador >= 0){
-        dibujarTextoCentrado(TextFormat("GANO %s", nombres[ganador]), 60, 44, COLOR_BOTON_ACTIVO);
+        dibujarDatoCentrado(TextFormat("GANO %s", nombres[ganador]), 60, 44, COLOR_BOTON_ACTIVO);
     }
     else {
         dibujarTextoCentrado("EMPATE", 60, 44, COLOR_TITULO);
@@ -171,10 +171,10 @@ void DibujarResultados()
 
     const InfoDificultad& nivel = DIFICULTADES[dificultad];
 
-    DrawText(TextFormat("%s   %dx%d      Tiempo  %s      Intentos  %d",
-                        nivel.nombre, nivel.filas, nivel.columnas,
-                        comoReloj(tiempo), intentos),
-             (int)panel.x + 40, (int)panel.y + 34, 22, COLOR_TENUE);
+    dibujarDato(TextFormat("%s   %dx%d      Tiempo  %s      Intentos  %d",
+                           nivel.nombre, nivel.filas, nivel.columnas,
+                           comoReloj(tiempo), intentos),
+                (int)panel.x + 40, (int)panel.y + 34, 22, COLOR_TENUE);
 
     for(int j = 0; j < numJugadores; j++){
         dibujarRenglonJugador(j, (int)panel.y + 110 + j * 64);

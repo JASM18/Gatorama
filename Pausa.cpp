@@ -71,6 +71,22 @@ static Rectangle barraVolumen()
 }
 
 /**
+ * \brief La tacha de cerrar, en la esquina del panel.
+ *
+ * Hace lo mismo que Continuar. Es un camino de m&aacute;s para el rat&oacute;n, no una acci&oacute;n
+ * nueva, as&iacute; que **no entra en el recorrido del teclado**: ese ya tiene dos
+ * salidas -ESC y el bot&oacute;n Continuar- y una tercera parada solo estorbar&iacute;a.
+ *
+ * \return Su rect&aacute;ngulo en pantalla.
+ */
+static Rectangle botonCerrar()
+{
+    Rectangle panel = panelPausa();
+
+    return rectangulo(panel.x + 18.0f, panel.y + 18.0f, 42.0f, 42.0f);
+}
+
+/**
  * \brief D&oacute;nde queda uno de los botones del panel.
  * \param indice Bot&oacute;n, desde cero.
  * \return Su rect&aacute;ngulo en pantalla.
@@ -133,7 +149,8 @@ AccionPausa ActualizarPausa()
 
     // La misma tecla que abre la pausa la cierra. Si ESC hiciera otra cosa aqui
     // -por ejemplo salir al menu- seria facil perder una partida sin querer.
-    if(IsKeyPressed(KEY_ESCAPE)) return Pausa_continuar;
+    if(IsKeyPressed(KEY_ESCAPE))      return Pausa_continuar;
+    if(botonClicado(botonCerrar()))   return Pausa_continuar;
 
     if(enfoqueActivado() && enfoque != ENFOQUE_VOLUMEN){
         return ACCIONES_PAUSA[enfoque - 1];
@@ -158,6 +175,8 @@ void DibujarPausa()
     DrawRectangleRounded(panel, 0.08f, 10, COLOR_PANEL);
     DrawRectangleRoundedLinesEx(panel, 0.08f, 10, 2.0f, COLOR_SELECCION);
 
+    dibujarBoton(botonCerrar(), "X", false);
+
     const char* titulo = "PAUSA";
     int tamano = 40;
     int ancho  = MeasureText(titulo, tamano);
@@ -177,10 +196,10 @@ void DibujarPausa()
     if(enfoque == ENFOQUE_VOLUMEN) dibujarAnilloEnfoque(barra);
 
     // El porcentaje va a la derecha de la barra, en el hueco que se le dejo.
-    DrawText(TextFormat("%d%%", (int)(VolumenMusica() * 100.0f + 0.5f)),
-             (int)(barra.x + barra.width + 22.0f),
-             (int)(barra.y - 4.0f),
-             20, COLOR_TENUE);
+    dibujarDato(TextFormat("%d%%", (int)(VolumenMusica() * 100.0f + 0.5f)),
+                (int)(barra.x + barra.width + 22.0f),
+                (int)(barra.y - 4.0f),
+                20, COLOR_TENUE);
 
     // ---- Botones ----
     for(int i = 0; i < NUM_BOTONES_PAUSA; i++){

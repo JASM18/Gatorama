@@ -43,7 +43,7 @@ struct InfoDificultad {
 // Cuando se cargue una fuente propia con SetTextureFilter esto se puede corregir.
 const InfoDificultad DIFICULTADES[NUM_DIFICULTADES] = {
     { "Facil",   2,  5 },   // 10 cartas -> 5 pares
-    { "Normal",  3,  6 },   // 18 cartas -> 9 pares
+    { "Normal",  2,  9 },   // 18 cartas -> 9 pares
     { "Dificil", 3, 10 }    // 30 cartas -> 15 pares
 };
 

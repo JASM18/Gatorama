@@ -55,53 +55,26 @@ static int opcionSeleccionada = 0;
 // Las tres imagenes son opcionales: si falta alguna, esa parte se dibuja con
 // texto. Asi el juego sigue corriendo mientras el arte esta a medio hacer, y nadie
 // se queda bloqueado esperando a nadie.
-static const char* RUTA_FONDO  = "recursos/fondo.png";
 static const char* RUTA_TITULO = "recursos/titulo.png";
 static const char* RUTA_JUGAR  = "recursos/jugar.png";
 
-static Texture2D texturaFondo;
 static Texture2D texturaTitulo;
 static Texture2D texturaJugar;
 
-static bool hayFondo  = false;
 static bool hayTitulo = false;
 static bool hayJugar  = false;
 
-/**
- * \brief Carga una imagen si existe y avisa si se pudo.
- * \param ruta    Archivo a cargar.
- * \param destino D&oacute;nde dejar la textura.
- * \return Verdadero si qued&oacute; cargada.
- */
-static bool cargarSiEsta(const char* ruta, Texture2D* destino)
-{
-    if(!FileExists(ruta)) return false;
-
-    *destino = LoadTexture(ruta);
-
-    if(!IsTextureValid(*destino)) return false;
-
-    // Filtro suave: la imagen se dibuja a su tamano exacto, pero si algun dia la
-    // ventana cambia de medida esto evita que se vea dentada.
-    SetTextureFilter(*destino, TEXTURE_FILTER_BILINEAR);
-
-    return true;
-}
-
 void CargarTexturasMenu()
 {
-    hayFondo  = cargarSiEsta(RUTA_FONDO,  &texturaFondo);
-    hayTitulo = cargarSiEsta(RUTA_TITULO, &texturaTitulo);
-    hayJugar  = cargarSiEsta(RUTA_JUGAR,  &texturaJugar);
+    hayTitulo = cargarTexturaSiEsta(RUTA_TITULO, &texturaTitulo);
+    hayJugar  = cargarTexturaSiEsta(RUTA_JUGAR,  &texturaJugar);
 }
 
 void DescargarTexturasMenu()
 {
-    if(hayFondo)  UnloadTexture(texturaFondo);
     if(hayTitulo) UnloadTexture(texturaTitulo);
     if(hayJugar)  UnloadTexture(texturaJugar);
 
-    hayFondo  = false;
     hayTitulo = false;
     hayJugar  = false;
 }
@@ -171,9 +144,7 @@ Escena_Estado ActualizarMenu()
 
 void DibujarMenu()
 {
-    // El fondo va primero, tapando el color liso que dejo ClearBackground.
-    if(hayFondo) DrawTexture(texturaFondo, 0, 0, WHITE);
-
+    // El fondo ya lo pinto el bucle principal, igual que en todas las pantallas.
     if(hayTitulo) dibujarCentrada(texturaTitulo, 110);
     else          dibujarTextoCentrado("GATORAMA", 110, 80, COLOR_TITULO);
 

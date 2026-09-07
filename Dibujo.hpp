@@ -37,4 +37,102 @@ void dibujarTextoCentrado(const char* texto, int y, int tamano, Color color);
  */
 void dibujarPantallaPendiente(const char* nombre);
 
+/**
+ * \brief Carga el fondo que se ve en todas las pantallas.
+ *
+ * **Despu&eacute;s de InitWindow()**, como toda textura.
+ */
+void cargarFondoGeneral();
+
+/**
+ * \brief Libera el fondo general. **Antes de CloseWindow()**.
+ */
+void descargarFondoGeneral();
+
+/**
+ * \brief Pinta el fondo general, cubriendo la ventana entera.
+ *
+ * Va **al principio de cada fotograma**, justo despu&eacute;s de limpiar la pantalla y
+ * antes que cualquier otra cosa. No hay que llamarlo desde cada pantalla: lo hace
+ * el bucle principal una sola vez, y por eso todas lo tienen sin pedirlo.
+ *
+ * Si el archivo no est&aacute; no dibuja nada y queda el color liso de Tema.hpp.
+ */
+void dibujarFondoGeneral();
+
+/**
+ * \brief Carga una imagen si el archivo existe, y avisa si se pudo.
+ *
+ * Vive aqu&iacute; porque ya la usan el men&uacute;, el tablero y la configuraci&oacute;n: era la misma
+ * media docena de l&iacute;neas copiada en tres archivos.
+ *
+ * Que devuelva un bool en vez de tronar es lo que permite que el juego corra con el
+ * arte a medio hacer: quien la llama guarda la respuesta y decide si dibuja la
+ * imagen o lo que hab&iacute;a antes.
+ *
+ * \param ruta    Archivo a cargar.
+ * \param destino D&oacute;nde dejar la textura.
+ * \return Verdadero si qued&oacute; cargada.
+ */
+bool cargarTexturaSiEsta(const char* ruta, Texture2D* destino);
+
+//***********************************************
+// TEXTO GENERADO
+//***********************************************
+// Las funciones de abajo dibujan con la fuente del juego, **Coconut Island**, y
+// est&aacute;n hechas para el texto que sale de los datos: el nombre que tecle&oacute; el
+// jugador, el reloj, los puntos, la tabla de puntajes.
+//
+// Los r&oacute;tulos fijos -"CREDITOS", "PAUSA", las etiquetas de los botones- siguen
+// con DrawText y la fuente de f&aacute;brica **a prop&oacute;sito**: esos se van a reemplazar por
+// im&aacute;genes, y no tiene caso vestirlos ahora.
+
+/**
+ * \brief Carga la fuente del juego.
+ *
+ * **Despu&eacute;s de InitWindow()**, como toda textura: una fuente cargada es al final
+ * una imagen en la memoria de video. Si el archivo no est&aacute;, el juego sigue
+ * corriendo con la fuente de f&aacute;brica.
+ */
+void cargarFuenteDatos();
+
+/**
+ * \brief Libera la fuente del juego. **Antes de CloseWindow()**.
+ */
+void descargarFuenteDatos();
+
+/**
+ * \brief Dibuja texto generado a partir de una esquina.
+ *
+ * \param texto  Cadena a dibujar.
+ * \param x      Coordenada horizontal de la esquina izquierda.
+ * \param y      Coordenada vertical de la esquina superior.
+ * \param tamano Alto de la letra en p&iacute;xeles.
+ * \param color  Color del texto.
+ */
+void dibujarDato(const char* texto, int x, int y, int tamano, Color color);
+
+/**
+ * \brief Dibuja texto generado, centrado horizontalmente en la ventana.
+ *
+ * \param texto  Cadena a dibujar.
+ * \param y      Coordenada vertical de la esquina superior.
+ * \param tamano Alto de la letra en p&iacute;xeles.
+ * \param color  Color del texto.
+ */
+void dibujarDatoCentrado(const char* texto, int y, int tamano, Color color);
+
+/**
+ * \brief Cu&aacute;ntos p&iacute;xeles de ancho ocupa un texto generado.
+ *
+ * Hace falta para centrar, alinear a la derecha o poner el cursor de escritura
+ * despu&eacute;s de la &uacute;ltima letra. **No** sirve MeasureText: esa mide con la fuente de
+ * f&aacute;brica y dar&iacute;a un ancho distinto al que se va a dibujar.
+ *
+ * \param texto  Cadena a medir.
+ * \param tamano Alto de la letra en p&iacute;xeles.
+ * \return Ancho en p&iacute;xeles.
+ */
+int anchoDato(const char* texto, int tamano);
+
 #endif // DIBUJO_HPP_INCLUDED

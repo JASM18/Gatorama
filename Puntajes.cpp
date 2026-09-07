@@ -334,14 +334,14 @@ static void dibujarTabla()
         int   y     = Y_PRIMERO + i * ALTO_RENGLON;
         Color color = colorDeLugar(i);
 
-        DrawText(TextFormat("%d", i + 1), X_LUGAR,  y, 22, color);
-        DrawText(p.nombre,                X_NOMBRE, y, 22, color);
+        dibujarDato(TextFormat("%d", i + 1), X_LUGAR,  y, 22, color);
+        dibujarDato(p.nombre,                X_NOMBRE, y, 22, color);
 
         // Los valores van en el mismo orden que las columnas del enum.
-        DrawText(TextFormat("%d", p.puntos), X_COLUMNA[Columna_puntos], y, 22, COLOR_TEXTO);
-        DrawText(TextFormat("%d", p.racha),  X_COLUMNA[Columna_racha],  y, 22, COLOR_TEXTO);
-        DrawText(TextFormat("%d", p.pares),  X_COLUMNA[Columna_pares],  y, 22, COLOR_TEXTO);
-        DrawText(comoReloj(p.tiempo),        X_COLUMNA[Columna_tiempo], y, 22, COLOR_TEXTO);
+        dibujarDato(TextFormat("%d", p.puntos), X_COLUMNA[Columna_puntos], y, 22, COLOR_TEXTO);
+        dibujarDato(TextFormat("%d", p.racha),  X_COLUMNA[Columna_racha],  y, 22, COLOR_TEXTO);
+        dibujarDato(TextFormat("%d", p.pares),  X_COLUMNA[Columna_pares],  y, 22, COLOR_TEXTO);
+        dibujarDato(comoReloj(p.tiempo),        X_COLUMNA[Columna_tiempo], y, 22, COLOR_TEXTO);
     }
 }
 
@@ -368,10 +368,10 @@ void DibujarPuntajes()
         dibujarTextoCentrado("Nadie ha jugado en esta categoria todavia",
                              300, 24, COLOR_TEXTO);
 
-        dibujarTextoCentrado(TextFormat("%s en %s",
-                                        modoFiltro == Modo_solitario ? "Solo" : "1 vs 1",
-                                        DIFICULTADES[dificultadFiltro].nombre),
-                             340, 20, COLOR_TENUE);
+        dibujarDatoCentrado(TextFormat("%s en %s",
+                                       modoFiltro == Modo_solitario ? "Solo" : "1 vs 1",
+                                       DIFICULTADES[dificultadFiltro].nombre),
+                            340, 20, COLOR_TENUE);
     } else {
         dibujarTabla();
 

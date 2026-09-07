@@ -22,6 +22,16 @@
 #include "ConfigPartida.hpp"
 
 /**
+ * \brief Carga las im&aacute;genes de la pantalla. **Despu&eacute;s de InitWindow()**.
+ */
+void CargarTexturasConfiguracion();
+
+/**
+ * \brief Libera las im&aacute;genes de la pantalla. **Antes de CloseWindow()**.
+ */
+void DescargarTexturasConfiguracion();
+
+/**
  * \brief Prepara la pantalla para entrar a ella.
  *
  * **Deja la configuraci&oacute;n como nueva**: modo solitario, dificultad f&aacute;cil y los

@@ -61,7 +61,9 @@ static DisenoTablero disenoActual()
 {
     const Tablero& t = partida->ElTablero();
 
-    return calcularDiseno(t.Filas(), t.Columnas(), areaDelTablero(), RELACION_CARTA);
+    // areaDeCartas y no areaDelTablero: el tapete cubre todo, las cartas van
+    // metidas hacia adentro para no encimarse con su marco.
+    return calcularDiseno(t.Filas(), t.Columnas(), areaDeCartas(), RELACION_CARTA);
 }
 
 /**
@@ -354,14 +356,14 @@ static void dibujarBloqueJugador(int jugador)
 
     Color colorNombre = marcarTurno ? COLOR_BOTON_ACTIVO : COLOR_TEXTO;
 
-    DrawText(nombreDeJugador(configActual, jugador + 1),
-             (int)rec.x + 14, (int)rec.y + 7, 20, colorNombre);
+    dibujarDato(nombreDeJugador(configActual, jugador + 1),
+                (int)rec.x + 14, (int)rec.y + 7, 20, colorNombre);
 
-    DrawText(TextFormat("Pares %d    Puntos %d    Racha %d",
-                        partida->ParesDe(jugador),
-                        partida->PuntajeDe(jugador),
-                        partida->RachaDe(jugador)),
-             (int)rec.x + 14, (int)rec.y + 32, 16, COLOR_TEXTO);
+    dibujarDato(TextFormat("Pares %d    Puntos %d    Racha %d",
+                           partida->ParesDe(jugador),
+                           partida->PuntajeDe(jugador),
+                           partida->RachaDe(jugador)),
+                (int)rec.x + 14, (int)rec.y + 32, 16, COLOR_TEXTO);
 
     if(marcarTurno){
         const char* aviso = "TU TURNO";
@@ -384,10 +386,12 @@ static void dibujarMarcador()
 
     const InfoDificultad& nivel = DIFICULTADES[configActual.dificultad];
 
-    dibujarTextoCentrado(TextFormat("%s  %dx%d      Intentos  %d      Tiempo  %s",
-                                    nivel.nombre, nivel.filas, nivel.columnas,
-                                    partida->Intentos(), comoReloj(partida->Tiempo())),
-                         50, 18, COLOR_TENUE);
+    // Baja hasta la altura de los marcadores de jugador, en el hueco que queda
+    // entre los dos. Pegada al titulo se veia apretada, y ese hueco estaba vacio.
+    dibujarDatoCentrado(TextFormat("%s  %dx%d      Intentos  %d      Tiempo  %s",
+                                   nivel.nombre, nivel.filas, nivel.columnas,
+                                   partida->Intentos(), comoReloj(partida->Tiempo())),
+                        96, 18, COLOR_TENUE);
 
     for(int i = 0; i < partida->NumJugadores(); i++){
         dibujarBloqueJugador(i);
@@ -400,11 +404,11 @@ static void dibujarMarcador()
 static void dibujarResultado()
 {
     if(partida->NumJugadores() == 1){
-        dibujarTextoCentrado(TextFormat("Encontraste las %d parejas en %s   -   %d puntos",
-                                        partida->ElTablero().NumeroDePares(),
-                                        comoReloj(partida->Tiempo()),
-                                        partida->PuntajeDe(0)),
-                             GetScreenHeight() - 40, 22, COLOR_BOTON_ACTIVO);
+        dibujarDatoCentrado(TextFormat("Encontraste las %d parejas en %s   -   %d puntos",
+                                       partida->ElTablero().NumeroDePares(),
+                                       comoReloj(partida->Tiempo()),
+                                       partida->PuntajeDe(0)),
+                            GetScreenHeight() - 40, 22, COLOR_BOTON_ACTIVO);
         return;
     }
 
@@ -417,10 +421,10 @@ static void dibujarResultado()
         return;
     }
 
-    dibujarTextoCentrado(TextFormat("Gano %s con %d parejas",
-                                    nombreDeJugador(configActual, ganador + 1),
-                                    partida->ParesDe(ganador)),
-                         GetScreenHeight() - 40, 22, COLOR_BOTON_ACTIVO);
+    dibujarDatoCentrado(TextFormat("Gano %s con %d parejas",
+                                   nombreDeJugador(configActual, ganador + 1),
+                                   partida->ParesDe(ganador)),
+                        GetScreenHeight() - 40, 22, COLOR_BOTON_ACTIVO);
 }
 
 void DibujarJuego()
@@ -429,6 +433,9 @@ void DibujarJuego()
 
     const Tablero& tablero = partida->ElTablero();
     DisenoTablero  diseno  = disenoActual();
+
+    // El tapete va primero: las cartas se reparten encima de el.
+    dibujarFondoTablero();
 
     for(int fila = 0; fila < tablero.Filas(); fila++){
         for(int columna = 0; columna < tablero.Columnas(); columna++){
@@ -457,9 +464,9 @@ void DibujarJuego()
     // distintas comparten dibujo y el juego se vuelve imposible de ganar. Vale mas
     // decirlo en pantalla que dejar que alguien lo descubra jugando.
     if(numeroDeIlustraciones() < tablero.NumeroDePares()){
-        dibujarTextoCentrado(TextFormat("Faltan ilustraciones: hay %d y se necesitan %d",
-                                        numeroDeIlustraciones(), tablero.NumeroDePares()),
-                             136, 16, COLOR_TITULO);
+        dibujarDatoCentrado(TextFormat("Faltan ilustraciones: hay %d y se necesitan %d",
+                                       numeroDeIlustraciones(), tablero.NumeroDePares()),
+                            136, 16, COLOR_TITULO);
     }
 
     if(partida->Terminada()){

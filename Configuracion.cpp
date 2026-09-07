@@ -66,6 +66,29 @@ static Rectangle botonIniciar()
 }
 
 //***********************************************
+// ARTE DE LA PANTALLA
+//***********************************************
+
+// El panel del resumen. Mide 560x400, lo mismo que panelResumen().
+static const char* RUTA_RESUMEN = "recursos/configResumen.png";
+
+static Texture2D texturaResumen;
+static bool      hayResumen = false;
+
+void CargarTexturasConfiguracion()
+{
+    hayResumen = cargarTexturaSiEsta(RUTA_RESUMEN, &texturaResumen);
+}
+
+void DescargarTexturasConfiguracion()
+{
+    if(hayResumen){
+        UnloadTexture(texturaResumen);
+        hayResumen = false;
+    }
+}
+
+//***********************************************
 // ESCRITURA DE NOMBRES
 //***********************************************
 
@@ -218,7 +241,7 @@ static void dibujarCampo(Rectangle rec, const char* texto, bool conFoco)
     int x = (int)rec.x + 14;
     int y = (int)(rec.y + (rec.height - TAMANO) / 2.0f);
 
-    DrawText(texto, x, y, TAMANO, COLOR_TEXTO);
+    dibujarDato(texto, x, y, TAMANO, COLOR_TEXTO);
 
     if(conFoco){
         // El cursor prende y apaga cada medio segundo. GetTime da los segundos
@@ -227,7 +250,7 @@ static void dibujarCampo(Rectangle rec, const char* texto, bool conFoco)
         bool visible = (GetTime() - (int)GetTime()) < 0.5;
 
         if(visible){
-            int desplazado = x + MeasureText(texto, TAMANO) + 2;
+            int desplazado = x + anchoDato(texto, TAMANO) + 2;
 
             DrawRectangle(desplazado, y, 2, TAMANO, COLOR_SELECCION);
         }
@@ -259,13 +282,13 @@ void DibujarConfiguracion(const ConfigPartida& config)
 
         // Debajo de cada boton, cuantas cartas trae. Es el dato que de verdad le
         // dice al jugador que tan larga va a ser la partida.
-        const char* cuantas = TextFormat("%d cartas", nivel.filas * nivel.columnas);
-        int         anchoSub = MeasureText(cuantas, 16);
+        const char* cuantas  = TextFormat("%d cartas", nivel.filas * nivel.columnas);
+        int         anchoSub = anchoDato(cuantas, 16);
 
-        DrawText(cuantas,
-                 (int)(rec.x + (rec.width - anchoSub) / 2.0f),
-                 (int)(rec.y + rec.height + 8.0f),
-                 16, COLOR_TENUE);
+        dibujarDato(cuantas,
+                    (int)(rec.x + (rec.width - anchoSub) / 2.0f),
+                    (int)(rec.y + rec.height + 8.0f),
+                    16, COLOR_TENUE);
     }
 
     // ---- 3. Jugadores ----
@@ -281,8 +304,18 @@ void DibujarConfiguracion(const ConfigPartida& config)
     // ---- Resumen ----
     Rectangle panel = panelResumen();
 
-    DrawRectangleRounded(panel, 0.06f, 10, COLOR_PANEL);
-    DrawRectangleRoundedLinesEx(panel, 0.06f, 10, 2.0f, COLOR_TENUE);
+    if(hayResumen){
+        Rectangle origen  = { 0.0f, 0.0f,
+                              (float)texturaResumen.width, (float)texturaResumen.height };
+        Vector2   desfase = { 0.0f, 0.0f };
+
+        DrawTexturePro(texturaResumen, origen, panel, desfase, 0.0f, WHITE);
+    } else {
+        // Sin imagen se dibuja el panel de siempre, para poder seguir trabajando
+        // en la pantalla aunque el arte no este.
+        DrawRectangleRounded(panel, 0.06f, 10, COLOR_PANEL);
+        DrawRectangleRoundedLinesEx(panel, 0.06f, 10, 2.0f, COLOR_TENUE);
+    }
 
     int x = (int)panel.x + 36;
     int y = (int)panel.y + 40;
@@ -291,21 +324,27 @@ void DibujarConfiguracion(const ConfigPartida& config)
 
     const InfoDificultad& nivel = DIFICULTADES[config.dificultad];
 
-    DrawText(TextFormat("Modo:        %s",
-                        config.modo == Modo_solitario ? "Solitario" : "Multijugador"),
-             x, y + 60, 22, COLOR_TEXTO);
+    // El rotulo fijo va con la fuente de fabrica y el valor con la del juego. Se
+    // dibujan en dos columnas y no en una sola cadena con espacios: en una fuente
+    // donde cada letra mide distinto, alinear con espacios no alinea nada.
+    const int X_VALOR = x + 150;
 
-    DrawText(TextFormat("Dificultad:  %s   %dx%d   (%d pares)",
-                        nivel.nombre, nivel.filas, nivel.columnas,
-                        (nivel.filas * nivel.columnas) / 2),
-             x, y + 96, 22, COLOR_TEXTO);
+    DrawText("Modo:", x, y + 60, 22, COLOR_TENUE);
+    dibujarDato(config.modo == Modo_solitario ? "Solitario" : "Multijugador",
+                X_VALOR, y + 60, 22, COLOR_TEXTO);
 
-    DrawText(TextFormat("Jugador:     %s", nombreDeJugador(config, 1)),
-             x, y + 132, 22, COLOR_TEXTO);
+    DrawText("Dificultad:", x, y + 96, 22, COLOR_TENUE);
+    dibujarDato(TextFormat("%s   %dx%d   (%d pares)",
+                           nivel.nombre, nivel.filas, nivel.columnas,
+                           (nivel.filas * nivel.columnas) / 2),
+                X_VALOR, y + 96, 22, COLOR_TEXTO);
+
+    DrawText("Jugador:", x, y + 132, 22, COLOR_TENUE);
+    dibujarDato(nombreDeJugador(config, 1), X_VALOR, y + 132, 22, COLOR_TEXTO);
 
     if(config.modo == Modo_multijugador){
-        DrawText(TextFormat("Jugador:     %s", nombreDeJugador(config, 2)),
-                 x, y + 168, 22, COLOR_TEXTO);
+        DrawText("Jugador:", x, y + 168, 22, COLOR_TENUE);
+        dibujarDato(nombreDeJugador(config, 2), X_VALOR, y + 168, 22, COLOR_TEXTO);
     }
 
     dibujarBoton(botonIniciar(), "Iniciar", true);

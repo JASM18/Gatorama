@@ -61,6 +61,9 @@ int main()
     // InitWindow cree el contexto de OpenGL.
     cargarTexturasTablero();
     CargarTexturasMenu();
+    CargarTexturasConfiguracion();
+    cargarFondoGeneral();
+    cargarFuenteDatos();
     IniciarAudio();
 
     Escena_Estado escenaActual = Escena_menu;
@@ -157,6 +160,11 @@ int main()
         BeginDrawing();
             ClearBackground(COLOR_FONDO);
 
+            // El fondo va aqui y no dentro de cada pantalla: se dibuja una sola
+            // vez, antes que todo lo demas, y por eso lo tienen todas sin que
+            // ninguna tenga que acordarse de pedirlo.
+            dibujarFondoGeneral();
+
             switch(escenaActual)
             {
                 case Escena_menu:
@@ -199,6 +207,9 @@ int main()
     LiberarPartida();
     descargarTexturasTablero();
     DescargarTexturasMenu();
+    DescargarTexturasConfiguracion();
+    descargarFondoGeneral();
+    descargarFuenteDatos();
 
     CloseWindow(); // Cierra la ventana
 
