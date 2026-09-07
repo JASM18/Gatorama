@@ -14,6 +14,7 @@
 #include "Pausa.hpp"
 #include "Instrucciones.hpp"
 #include "Puntajes.hpp"
+#include "Audio.hpp"
 #include "Resultados.hpp"
 #include "Boton.hpp"
 #include "Dibujo.hpp"
@@ -124,6 +125,9 @@ void IniciarPartida(const ConfigPartida& config)
         partida = new Partida(Dificultad_facil, 1);
     }
 
+    // Que gatos salen en esta partida se sortea aqui, junto con el reparto.
+    barajarIlustraciones();
+
     esperaOcultar     = 0.0f;
     cartaResaltada    = -1;
     enPausa           = false;
@@ -138,6 +142,7 @@ void ReiniciarPartida()
     if(partida == 0) return;
 
     partida->Reiniciar();
+    barajarIlustraciones();
 
     // La pausa se cierra tambien. Reiniciar significa volver a jugar: dejar el
     // panel abierto encima del tablero nuevo obligaba a cerrarlo a mano.
@@ -257,6 +262,10 @@ Escena_Estado ActualizarJuego()
         // hace aqui y no al salir de la pantalla porque en un stand alguien va a
         // cerrar la ventana con la tacha, y lo que no se guardo se pierde.
         if(!resultadoGuardado){
+            // Suena en el momento en que se junta la ultima pareja, no al llegar a
+            // la pantalla de resultados: el aplauso va cuando pasa la cosa.
+            ReproducirVictoria();
+
             GuardarResultado(configActual, *partida);
             PrepararResultados(configActual, *partida);
 
@@ -451,7 +460,7 @@ void DibujarJuego()
                           && !enPausa;
 
             if(carta.EstaVolteada()){
-                dibujarCaraCarta(rec, false, carta.IdPareja());
+                dibujarCaraCarta(rec, false, ilustracionDePareja(carta.IdPareja()));
             } else {
                 dibujarDorsoCarta(rec, resaltada);
             }

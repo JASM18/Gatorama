@@ -138,14 +138,14 @@ AccionPausa ActualizarPausa()
         // extremo.
         float paso = 0.6f * GetFrameTime();
 
-        if(IsKeyDown(KEY_RIGHT)) FijarVolumenMusica(VolumenMusica() + paso);
-        if(IsKeyDown(KEY_LEFT))  FijarVolumenMusica(VolumenMusica() - paso);
+        if(IsKeyDown(KEY_RIGHT)) FijarVolumenGeneral(VolumenGeneral() + paso);
+        if(IsKeyDown(KEY_LEFT))  FijarVolumenGeneral(VolumenGeneral() - paso);
     }
 
     // El volumen del raton se atiende antes que los botones. Si se hiciera al
     // reves, soltar el raton sobre la barra despues de arrastrarla podria contar
     // como clic en el boton que quedo debajo.
-    FijarVolumenMusica(valorDeslizador(barraVolumen(), VolumenMusica()));
+    FijarVolumenGeneral(valorDeslizador(barraVolumen(), VolumenGeneral()));
 
     // La misma tecla que abre la pausa la cierra. Si ESC hiciera otra cosa aqui
     // -por ejemplo salir al menu- seria facil perder una partida sin querer.
@@ -191,12 +191,12 @@ void DibujarPausa()
 
     DrawText("Volumen", (int)barra.x, (int)(barra.y - 30.0f), 20, COLOR_TEXTO);
 
-    dibujarDeslizador(barra, VolumenMusica());
+    dibujarDeslizador(barra, VolumenGeneral());
 
     if(enfoque == ENFOQUE_VOLUMEN) dibujarAnilloEnfoque(barra);
 
     // El porcentaje va a la derecha de la barra, en el hueco que se le dejo.
-    dibujarDato(TextFormat("%d%%", (int)(VolumenMusica() * 100.0f + 0.5f)),
+    dibujarDato(TextFormat("%d%%", (int)(VolumenGeneral() * 100.0f + 0.5f)),
                 (int)(barra.x + barra.width + 22.0f),
                 (int)(barra.y - 4.0f),
                 20, COLOR_TENUE);

@@ -64,14 +64,14 @@ Escena_Estado ActualizarOpciones()
         // cualquier maquina.
         float paso = 0.6f * GetFrameTime();
 
-        if(IsKeyDown(KEY_RIGHT)) FijarVolumenMusica(VolumenMusica() + paso);
-        if(IsKeyDown(KEY_LEFT))  FijarVolumenMusica(VolumenMusica() - paso);
+        if(IsKeyDown(KEY_RIGHT)) FijarVolumenGeneral(VolumenGeneral() + paso);
+        if(IsKeyDown(KEY_LEFT))  FijarVolumenGeneral(VolumenGeneral() - paso);
     }
 
     // El volumen del raton se atiende antes que el boton. Si se hiciera al reves,
     // soltar el raton sobre la barra tras arrastrarla podria contar como clic en
     // lo que quedara debajo.
-    FijarVolumenMusica(valorDeslizador(barraVolumen(), VolumenMusica()));
+    FijarVolumenGeneral(valorDeslizador(barraVolumen(), VolumenGeneral()));
 
     if(IsKeyPressed(KEY_ESCAPE))    return Escena_menu;
     if(botonClicado(botonVolver())) return Escena_menu;
@@ -90,18 +90,18 @@ void DibujarOpciones()
     DrawRectangleRounded(panel, 0.06f, 10, COLOR_PANEL);
     DrawRectangleRoundedLinesEx(panel, 0.06f, 10, 2.0f, COLOR_TENUE);
 
-    DrawText("Musica", (int)panel.x + 50, (int)panel.y + 60, 26, COLOR_TEXTO);
+    DrawText("Volumen", (int)panel.x + 50, (int)panel.y + 60, 26, COLOR_TEXTO);
 
-    DrawText("El mismo volumen que se ajusta desde la pausa",
+    DrawText("Gobierna la musica y los efectos. El mismo que se ajusta desde la pausa",
              (int)panel.x + 50, (int)panel.y + 96, 16, COLOR_TENUE);
 
     Rectangle barra = barraVolumen();
 
-    dibujarDeslizador(barra, VolumenMusica());
+    dibujarDeslizador(barra, VolumenGeneral());
 
     if(enfoque == ENFOQUE_VOLUMEN) dibujarAnilloEnfoque(barra);
 
-    dibujarDato(TextFormat("%d%%", (int)(VolumenMusica() * 100.0f + 0.5f)),
+    dibujarDato(TextFormat("%d%%", (int)(VolumenGeneral() * 100.0f + 0.5f)),
                 (int)(barra.x + barra.width + 24.0f), (int)(barra.y - 6.0f),
                 24, COLOR_SELECCION);
 

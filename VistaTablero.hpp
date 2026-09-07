@@ -151,6 +151,27 @@ void cargarTexturasTablero();
 void dibujarFondoTablero();
 
 /**
+ * \brief Sortea qu&eacute; gatos le tocan a las parejas de esta partida.
+ *
+ * El modelo reparte parejas numeradas 0, 1, 2&hellip; y nunca sabe de dibujos. Sin este
+ * sorteo, la pareja 0 siempre mostraba el gato01 y la 1 el gato02, as&iacute; que en
+ * F&aacute;cil se jugaba **siempre con los mismos cinco gatos** aunque cambiaran de
+ * lugar. Barajar la correspondencia hace que cada partida traiga una selecci&oacute;n
+ * distinta de la baraja completa.
+ *
+ * Se llama al empezar y al reiniciar una partida.
+ */
+void barajarIlustraciones();
+
+/**
+ * \brief Qu&eacute; gato le toca a una pareja en esta partida.
+ *
+ * \param idPareja N&uacute;mero de pareja que da el modelo.
+ * \return &Iacute;ndice de la ilustraci&oacute;n que le corresponde.
+ */
+int ilustracionDePareja(int idPareja);
+
+/**
  * \brief Cu&aacute;ntas ilustraciones se lograron cargar.
  * \return N&uacute;mero de im&aacute;genes disponibles; cero si no se carg&oacute; ninguna.
  */

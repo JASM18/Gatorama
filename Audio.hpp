@@ -42,10 +42,29 @@ void ActualizarAudio();
 void CerrarAudio();
 
 /**
- * \brief El volumen actual de la m&uacute;sica.
+ * \brief Suena uno de los efectos de evento, elegido al azar.
+ *
+ * Hay dos y se echa un volado entre ellos. Es un detalle chico con un efecto
+ * grande: un mismo clic que siempre suena igual se vuelve monotono en un stand
+ * donde el juego se usa cien veces seguidas.
+ */
+void ReproducirEvento();
+
+/**
+ * \brief Suena el efecto de victoria.
+ */
+void ReproducirVictoria();
+
+/**
+ * \brief El volumen actual, que gobierna la m&uacute;sica **y** los efectos.
+ *
+ * Es uno solo a prop&oacute;sito: el deslizador dice "Volumen", no "M&uacute;sica", y bajarlo
+ * tiene que callar el juego entero. Dos volumenes separados serian dos cosas que
+ * se pueden desincronizar sin que nadie se de cuenta.
+ *
  * \return Un valor de 0.0 (mudo) a 1.0 (m&aacute;ximo).
  */
-float VolumenMusica();
+float VolumenGeneral();
 
 /**
  * \brief Cambia el volumen de la m&uacute;sica.
@@ -55,6 +74,6 @@ float VolumenMusica();
  *
  * \param volumen De 0.0 a 1.0.
  */
-void FijarVolumenMusica(float volumen);
+void FijarVolumenGeneral(float volumen);
 
 #endif // AUDIO_HPP_INCLUDED

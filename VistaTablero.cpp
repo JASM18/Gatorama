@@ -12,6 +12,7 @@
 
 #include "VistaTablero.hpp"
 #include "Dificultad.hpp"
+#include "Aleatorio.hpp"
 #include "Dibujo.hpp"
 #include "Tema.hpp"
 
@@ -179,6 +180,11 @@ static bool      hayDorso = false;
 static Texture2D texturasGato[MAX_GATOS];
 static int       numTexturasCargadas = 0;
 
+// A que ilustracion corresponde cada pareja en la partida de ahorita. Se baraja al
+// empezar cada partida: ese es el sorteo que decide CUALES gatos salen, distinto
+// del barajado del tablero, que decide DONDE queda cada carta.
+static int ordenIlustraciones[MAX_GATOS];
+
 void cargarTexturasTablero()
 {
     numTexturasCargadas = 0;
@@ -229,6 +235,36 @@ void cargarTexturasTablero()
         texturasGato[numTexturasCargadas] = tex;
         numTexturasCargadas++;
     }
+
+    // Deja un orden valido desde el arranque, por si algo dibuja antes de que
+    // empiece la primera partida.
+    barajarIlustraciones();
+}
+
+void barajarIlustraciones()
+{
+    for(int i = 0; i < numTexturasCargadas; i++) ordenIlustraciones[i] = i;
+
+    // Fisher-Yates, el mismo que reparte las cartas en Tablero::Repartir. Como el
+    // tablero toma las parejas 0, 1, 2... en orden, barajar esta lista equivale a
+    // sacar al azar tantos gatos como parejas haga falta, sin repetir.
+    for(int i = numTexturasCargadas - 1; i > 0; i--){
+        int j = aleatorio(0, i);
+
+        int temporal          = ordenIlustraciones[i];
+        ordenIlustraciones[i] = ordenIlustraciones[j];
+        ordenIlustraciones[j] = temporal;
+    }
+}
+
+int ilustracionDePareja(int idPareja)
+{
+    if(numTexturasCargadas <= 0 || idPareja < 0) return 0;
+
+    // El residuo protege el caso de que falten gatos: con menos ilustraciones que
+    // parejas se repiten, que es feo pero no truena, y el aviso de la pantalla de
+    // juego ya le dice al equipo lo que pasa.
+    return ordenIlustraciones[idPareja % numTexturasCargadas];
 }
 
 int numeroDeIlustraciones()

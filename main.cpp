@@ -86,6 +86,8 @@ int main()
         // -------------------------------------------
         // ACTUALIZAR: leer entrada y cambiar el estado
         // -------------------------------------------
+        Escena_Estado escenaAnterior = escenaActual;
+
         switch(escenaActual)
         {
             case Escena_menu:
@@ -151,6 +153,20 @@ int main()
             break;
 
             default: break;
+        }
+
+        // El sonido de cambio de pantalla se dispara aqui y en ningun otro lado.
+        // Comparar contra la escena anterior lo ata a ENTRAR a una pantalla, no a
+        // salir de ella, y como es un solo punto, una pantalla nueva lo hereda
+        // sin que nadie tenga que acordarse de agregarlo.
+        //
+        // Dos excepciones: al cerrar el juego no tiene caso, y a los resultados se
+        // llega con el sonido de victoria ya sonando desde que se junto la ultima
+        // pareja; un clic encima solo lo taparia.
+        if(escenaActual != escenaAnterior
+        && escenaActual != Escena_salir
+        && escenaActual != Escena_resultados){
+            ReproducirEvento();
         }
 
         // -------------------------------------------
