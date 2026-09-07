@@ -9,11 +9,16 @@
 
 #include "raylib.h"
 #include <iostream>
+#include <cstdlib>
+#include <ctime>
 
 #include "Menu.hpp"
 #include "Dibujo.hpp"
 #include "Tema.hpp"
 #include "VistaTablero.hpp"
+#include "ConfigPartida.hpp"
+#include "Configuracion.hpp"
+#include "Juego.hpp"
 
 // ***********************************************
 // CONFIGURACION DE LA VENTANA
@@ -31,6 +36,12 @@ using namespace std;
 
 int main()
 {
+    // El barajado del tablero usa rand() a traves de aleatorio(). Si no se le da
+    // una semilla, rand() arranca siempre en el mismo punto y las cartas saldrian
+    // EXACTAMENTE en el mismo orden en cada partida. La hora actual cambia cada
+    // segundo, asi que sirve de semilla. Se hace una sola vez, aqui.
+    srand(time(NULL));
+
     // InitWindow crea la ventana
     InitWindow(PantallaAncho, PantallaAlto, "Gatorama");
     SetTargetFPS(FPS); // Se establece el juego a 60 fps
@@ -47,6 +58,11 @@ int main()
 
     Escena_Estado escenaActual = Escena_menu;
 
+    // Lo que el jugador elige en la pantalla de configuracion. Vive aqui, en el
+    // bucle, porque es lo unico que dos pantallas distintas se tienen que pasar:
+    // la configuracion lo llena y el juego lo lee.
+    ConfigPartida config = configPorDefecto();
+
     // Loop principal del juego
     // Se sale por la X de la ventana o cuando el menu pide Escena_salir.
     while(!WindowShouldClose() && escenaActual != Escena_salir){
@@ -57,24 +73,40 @@ int main()
         switch(escenaActual)
         {
             case Escena_menu:
+            {
                 // El menu se encarga de su propia navegacion y nos devuelve a
                 // donde hay que ir. Si nadie eligio nada, devuelve Escena_menu
                 // y aqui no cambia nada.
-                escenaActual = ActualizarMenu();
+                Escena_Estado siguiente = ActualizarMenu();
+
+                // Se le avisa a la configuracion que va a entrar, para que llegue
+                // sin el cursor parado en un campo de la visita anterior.
+                if(siguiente == Escena_configuracion) PrepararConfiguracion();
+
+                escenaActual = siguiente;
+            }
+            break;
+
+            case Escena_configuracion:
+            {
+                Escena_Estado siguiente = ActualizarConfiguracion(config);
+
+                // La configuracion solo dice "ya quedo". Quien reparte el tablero
+                // es el juego, y por eso la partida se arma justo aqui, en el
+                // brinco entre las dos pantallas.
+                if(siguiente == Escena_juego) IniciarPartida(config);
+
+                escenaActual = siguiente;
+            }
             break;
 
             case Escena_juego:
-                // Todavia no hay partida: lo que vive aqui es el banco de pruebas
-                // del tablero, que sirve para medir a que tamano quedan las cartas
-                // en cada dificultad. Cuando exista el modelo, esta linea cambia
-                // por la partida de verdad y el resto de main.cpp no se entera.
-                escenaActual = ActualizarPruebaTablero();
+                escenaActual = ActualizarJuego();
             break;
 
             // Estas pantallas todavia no existen, asi que por ahora se comportan
             // igual: ESC regresa al menu. Conforme cada una se implemente, saldra
             // de esta lista y tendra su propio case.
-            case Escena_configuracion:
             case Escena_puntajes:
             case Escena_creditos:
 
@@ -101,7 +133,7 @@ int main()
                 break;
 
                 case Escena_configuracion:
-                    dibujarPantallaPendiente("CONFIGURAR PARTIDA");
+                    DibujarConfiguracion(config);
                 break;
 
                 case Escena_puntajes:
@@ -113,7 +145,7 @@ int main()
                 break;
 
                 case Escena_juego:
-                    DibujarPruebaTablero();
+                    DibujarJuego();
                 break;
 
                 default: break;
@@ -124,6 +156,7 @@ int main()
 
     // Y se liberan antes de cerrar, por la misma razon al reves: despues de
     // CloseWindow ya no hay a quien devolverle esa memoria.
+    LiberarPartida();
     descargarTexturasTablero();
 
     CloseWindow(); // Cierra la ventana

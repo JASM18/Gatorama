@@ -16,7 +16,15 @@
 #define VISTATABLERO_HPP_INCLUDED
 
 #include "raylib.h"
-#include "Menu.hpp"
+
+/**
+ * \brief Forma de la carta: ancho entre alto.
+ *
+ * El equipo eligi&oacute; 2:3 -proporci&oacute;n de carta de baraja- despu&eacute;s de
+ * compararla en pantalla contra 3:4 y 1:1. Todo el arte se dibuja con esta
+ * relaci&oacute;n, as&iacute; que cambiarla obligar&iacute;a a rehacer las ilustraciones.
+ */
+const float RELACION_CARTA = 2.0f / 3.0f;
 
 /**
  * \brief Resultado de acomodar una cuadr&iacute;cula de cartas dentro de un &aacute;rea.
@@ -133,23 +141,5 @@ void descargarTexturasTablero();
  *                           ilustraciones cargadas, as&iacute; que cualquier entero es v&aacute;lido.
  */
 void dibujarCaraCarta(Rectangle rec, bool resaltada, int indiceIlustracion);
-
-//***********************************************
-// BANCO DE PRUEBAS (TEMPORAL)
-//***********************************************
-// Las dos funciones de abajo son una pantalla de medici&oacute;n, no el juego. Sirven
-// para ver los tres tableros a escala real y decidir a qu&eacute; resoluci&oacute;n se dibujan
-// los gatos. Se borran cuando la pantalla de juego exista de verdad.
-
-/**
- * \brief Procesa la entrada del banco de pruebas (una llamada por fotograma).
- * \return La escena a la que hay que cambiar, o Escena_juego si seguimos aqu&iacute;.
- */
-Escena_Estado ActualizarPruebaTablero();
-
-/**
- * \brief Dibuja el banco de pruebas: el tablero y las medidas en p&iacute;xeles.
- */
-void DibujarPruebaTablero();
 
 #endif // VISTATABLERO_HPP_INCLUDED

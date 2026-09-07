@@ -43,15 +43,30 @@
 		</Linker>
 		<Unit filename="Aleatorio.cpp" />
 		<Unit filename="Aleatorio.hpp" />
+		<Unit filename="Carta.cpp" />
+		<Unit filename="Carta.hpp" />
 		<Unit filename="Dibujo.cpp" />
 		<Unit filename="Dibujo.hpp" />
 		<Unit filename="Dificultad.cpp" />
 		<Unit filename="Dificultad.hpp" />
 		<Unit filename="Menu.cpp" />
 		<Unit filename="Menu.hpp" />
+		<Unit filename="Tablero.cpp" />
+		<Unit filename="Tablero.hpp" />
 		<Unit filename="Tema.hpp" />
 		<Unit filename="VistaTablero.cpp" />
 		<Unit filename="VistaTablero.hpp" />
+		<Unit filename="Boton.cpp" />
+		<Unit filename="Boton.hpp" />
+		<Unit filename="ConfigPartida.cpp" />
+		<Unit filename="ConfigPartida.hpp" />
+		<Unit filename="Configuracion.cpp" />
+		<Unit filename="Configuracion.hpp" />
+		<Unit filename="Escena.hpp" />
+		<Unit filename="Juego.cpp" />
+		<Unit filename="Juego.hpp" />
+		<Unit filename="Pausa.cpp" />
+		<Unit filename="Pausa.hpp" />
 		<Unit filename="main.cpp" />
 		<Extensions />
 	</Project>

@@ -10,23 +10,7 @@
 #ifndef MENU_HPP_INCLUDED
 #define MENU_HPP_INCLUDED
 
-/**
- * \brief Pantallas del juego.
- *
- * El bucle principal guarda uno de estos valores y decide con &eacute;l qu&eacute; actualizar
- * y qu&eacute; dibujar en cada vuelta. No hay ventanas ni pantallas de verdad: solo
- * esta variable.
- */
-enum Escena_Estado {
-    Escena_menu,
-    Escena_configuracion,
-    Escena_puntajes,
-    Escena_creditos,
-    Escena_juego,
-    Escena_pausa,
-    Escena_resultados,
-    Escena_salir        ///< No dibuja nada; le avisa al bucle que termine
-};
+#include "Escena.hpp"
 
 /**
  * \brief Procesa la entrada del men&uacute; principal (una llamada por fotograma).

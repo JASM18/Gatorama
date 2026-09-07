@@ -6,6 +6,10 @@ obj/
 *.obj
 *.exe
 
+# Ejecutable que produce el Makefile en macOS y Linux (no lleva extension,
+# asi que *.exe no lo atrapa)
+/Gatorama
+
 # Estado personal de Code::Blocks
 *.layout
 *.depend

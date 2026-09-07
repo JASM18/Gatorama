@@ -33,4 +33,12 @@ const Color COLOR_CARTA_DORSO = {  69,  71,  90, 255 };   ///< Cara oculta de la
 const Color COLOR_CARTA_BORDE = { 137, 180, 250, 255 };   ///< Contorno de la carta
 const Color COLOR_CARTA_HOVER = {  88,  91, 112, 255 };   ///< Carta bajo el puntero
 
+// Botones y paneles. El boton "activo" es el de una opcion ya elegida -por ejemplo
+// la dificultad seleccionada-, distinto del que solo tiene el raton encima.
+const Color COLOR_BOTON       = {  49,  50,  68, 255 };   ///< Bot&oacute;n en reposo
+const Color COLOR_BOTON_HOVER = {  69,  71,  90, 255 };   ///< Bot&oacute;n bajo el puntero
+const Color COLOR_BOTON_ACTIVO= { 137, 180, 250, 255 };   ///< Bot&oacute;n de la opci&oacute;n elegida
+const Color COLOR_PANEL       = {  36,  37,  54, 255 };   ///< Fondo de las ventanas virtuales
+const Color COLOR_VELO        = {  17,  17,  27, 200 };   ///< Oscurecido detr&aacute;s de un panel
+
 #endif // TEMA_HPP_INCLUDED

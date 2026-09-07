@@ -32,13 +32,8 @@ static const char* ETIQUETAS[NUM_OPCIONES] = {
     "Salir"
 };
 
-// TEMPORAL: "Jugar" entra directo a la partida. Lo correcto es que pase antes por
-// la pantalla de configuracion -elegir dificultad y si son uno o dos jugadores-,
-// pero esa pantalla todavia no existe y mandar ahi dejaba el juego inalcanzable.
-// Cuando Escena_configuracion se implemente, este renglon vuelve a ser
-// Escena_configuracion y ella decide cuando pasar a Escena_juego.
 static const Escena_Estado DESTINOS[NUM_OPCIONES] = {
-    Escena_juego,
+    Escena_configuracion,
     Escena_puntajes,
     Escena_creditos,
     Escena_salir
