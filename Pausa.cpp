@@ -9,6 +9,7 @@
 
 #include "Pausa.hpp"
 #include "Boton.hpp"
+#include "Audio.hpp"
 #include "Dibujo.hpp"
 #include "Tema.hpp"
 
@@ -16,11 +17,12 @@
 // ACOMODO DEL PANEL
 //***********************************************
 
-const int NUM_BOTONES_PAUSA = 3;
+const int NUM_BOTONES_PAUSA = 4;
 
 static const char* ETIQUETAS_PAUSA[NUM_BOTONES_PAUSA] = {
     "Continuar",
     "Reiniciar partida",
+    "Como se juega",
     "Regresar al menu"
 };
 
@@ -29,11 +31,12 @@ static const char* ETIQUETAS_PAUSA[NUM_BOTONES_PAUSA] = {
 static const AccionPausa ACCIONES_PAUSA[NUM_BOTONES_PAUSA] = {
     Pausa_continuar,
     Pausa_reiniciar,
+    Pausa_instrucciones,
     Pausa_menu
 };
 
-static const float PANEL_ANCHO = 420.0f;
-static const float PANEL_ALTO  = 320.0f;
+static const float PANEL_ANCHO = 440.0f;
+static const float PANEL_ALTO  = 470.0f;
 
 /**
  * \brief El rect&aacute;ngulo del panel, centrado en la ventana.
@@ -50,6 +53,17 @@ static Rectangle panelPausa()
 }
 
 /**
+ * \brief La barra de volumen dentro del panel.
+ * \return Su rect&aacute;ngulo en pantalla.
+ */
+static Rectangle barraVolumen()
+{
+    Rectangle panel = panelPausa();
+
+    return rectangulo(panel.x + 40.0f, panel.y + 122.0f, panel.width - 130.0f, 16.0f);
+}
+
+/**
  * \brief D&oacute;nde queda uno de los botones del panel.
  * \param indice Bot&oacute;n, desde cero.
  * \return Su rect&aacute;ngulo en pantalla.
@@ -58,10 +72,10 @@ static Rectangle botonPausa(int indice)
 {
     Rectangle panel = panelPausa();
 
-    const float MARGEN   = 40.0f;
-    const float ALTO     = 52.0f;
-    const float SEPARA   = 18.0f;
-    const float PRIMERO  = 110.0f;   // debajo del titulo
+    const float MARGEN  = 40.0f;
+    const float ALTO    = 50.0f;
+    const float SEPARA  = 14.0f;
+    const float PRIMERO = 178.0f;   // debajo del volumen
 
     return rectangulo(panel.x + MARGEN,
                       panel.y + PRIMERO + indice * (ALTO + SEPARA),
@@ -75,6 +89,11 @@ static Rectangle botonPausa(int indice)
 
 AccionPausa ActualizarPausa()
 {
+    // El volumen se atiende antes que los botones. Si se hiciera al reves, soltar
+    // el raton sobre la barra despues de arrastrarla podria contar como clic en
+    // el boton que quedo debajo.
+    FijarVolumenMusica(valorDeslizador(barraVolumen(), VolumenMusica()));
+
     // La misma tecla que abre la pausa la cierra. Si ESC hiciera otra cosa aqui
     // -por ejemplo salir al menu- seria facil perder una partida sin querer.
     if(IsKeyPressed(KEY_ESCAPE)) return Pausa_continuar;
@@ -104,9 +123,23 @@ void DibujarPausa()
 
     DrawText(titulo,
              (int)(panel.x + (panel.width - ancho) / 2.0f),
-             (int)(panel.y + 38.0f),
+             (int)(panel.y + 34.0f),
              tamano, COLOR_TITULO);
 
+    // ---- Volumen ----
+    Rectangle barra = barraVolumen();
+
+    DrawText("Volumen", (int)barra.x, (int)(barra.y - 30.0f), 20, COLOR_TEXTO);
+
+    dibujarDeslizador(barra, VolumenMusica());
+
+    // El porcentaje va a la derecha de la barra, en el hueco que se le dejo.
+    DrawText(TextFormat("%d%%", (int)(VolumenMusica() * 100.0f + 0.5f)),
+             (int)(barra.x + barra.width + 22.0f),
+             (int)(barra.y - 4.0f),
+             20, COLOR_TENUE);
+
+    // ---- Botones ----
     for(int i = 0; i < NUM_BOTONES_PAUSA; i++){
         // Ninguno va marcado como seleccionado: son acciones, no opciones entre
         // las que se escoge una y se queda encendida.
@@ -114,5 +147,5 @@ void DibujarPausa()
     }
 
     dibujarTextoCentrado("ESC para seguir jugando",
-                         (int)(panel.y + panel.height - 34.0f), 18, COLOR_TENUE);
+                         (int)(panel.y + panel.height - 32.0f), 18, COLOR_TENUE);
 }

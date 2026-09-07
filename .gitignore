@@ -10,6 +10,9 @@ obj/
 # asi que *.exe no lo atrapa)
 /Gatorama
 
+# Puntajes de cada maquina: se generan jugando, no se comparten
+puntajes.json
+
 # Estado personal de Code::Blocks
 *.layout
 *.depend

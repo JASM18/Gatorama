@@ -57,4 +57,24 @@ void dibujarBoton(Rectangle rec, const char* etiqueta, bool seleccionado);
  */
 Rectangle rectangulo(float x, float y, float ancho, float alto);
 
+/**
+ * \brief Lee la nueva posici&oacute;n de un deslizador.
+ *
+ * Va en la parte de **actualizar**. Mientras se mantenga apretado el bot&oacute;n
+ * izquierdo, el valor sigue al rat&oacute;n; se puede arrastrar de largo sin salirse,
+ * porque el valor se recorta a los extremos.
+ *
+ * \param rec         Zona del deslizador.
+ * \param valorActual Valor que tiene ahora, de 0.0 a 1.0.
+ * \return El valor nuevo, o el mismo si nadie lo est&aacute; arrastrando.
+ */
+float valorDeslizador(Rectangle rec, float valorActual);
+
+/**
+ * \brief Dibuja un deslizador con su parte llena y su perilla.
+ * \param rec   Zona del deslizador.
+ * \param valor Valor de 0.0 a 1.0.
+ */
+void dibujarDeslizador(Rectangle rec, float valor);
+
 #endif // BOTON_HPP_INCLUDED

@@ -67,6 +67,26 @@
 		<Unit filename="Juego.hpp" />
 		<Unit filename="Pausa.cpp" />
 		<Unit filename="Pausa.hpp" />
+		<Unit filename="Audio.cpp" />
+		<Unit filename="Audio.hpp" />
+		<Unit filename="Creditos.cpp" />
+		<Unit filename="Creditos.hpp" />
+		<Unit filename="Instrucciones.cpp" />
+		<Unit filename="Instrucciones.hpp" />
+		<Unit filename="Partida.cpp" />
+		<Unit filename="Partida.hpp" />
+		<Unit filename="Monticulo.cpp" />
+		<Unit filename="Monticulo.hpp" />
+		<Unit filename="Puntaje.cpp" />
+		<Unit filename="Puntaje.hpp" />
+		<Unit filename="Puntajes.cpp" />
+		<Unit filename="Puntajes.hpp" />
+		<Unit filename="TablaPuntajes.cpp" />
+		<Unit filename="TablaPuntajes.hpp" />
+		<Unit filename="Opciones.cpp" />
+		<Unit filename="Opciones.hpp" />
+		<Unit filename="Resultados.cpp" />
+		<Unit filename="Resultados.hpp" />
 		<Unit filename="main.cpp" />
 		<Extensions />
 	</Project>

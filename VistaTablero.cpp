@@ -133,7 +133,9 @@ static const int   SEGMENTOS = 8;   // triangulos por esquina; con 8 ya se ve li
 //
 // Cuando el mazo este completo esta lista saldra de un archivo y no del codigo,
 // para que agregar un gato no obligue a recompilar. Por ahora son dos y caben.
-const int NUM_GATOS = 2;
+// Tope de cuantas ilustraciones caben. No es cuantas hay: es hasta donde se
+// buscan. Subirlo no cuesta nada mientras no existan los archivos.
+const int MAX_GATOS = 24;
 
 // gato00 es la contraportada: la cara que se ve cuando la carta esta boca abajo.
 // Va aparte de la lista de gatos porque no es una pareja, es el reverso de todas.
@@ -142,16 +144,10 @@ static const char* RUTA_DORSO = "recursos/gato00.png";
 static Texture2D texturaDorso;
 static bool      hayDorso = false;
 
-static const char* RUTAS_GATOS[NUM_GATOS] = {
-    "recursos/gato01.png",
-    "recursos/gato02.png"
-};
-
 // Solo se guardan las que si cargaron, apretadas al principio del arreglo. Asi
 // numTexturasCargadas siempre sirve para sacar el residuo sin dejar huecos.
-static Texture2D   texturasGato[NUM_GATOS];
-static const char* rutasCargadas[NUM_GATOS];
-static int         numTexturasCargadas = 0;
+static Texture2D texturasGato[MAX_GATOS];
+static int       numTexturasCargadas = 0;
 
 void cargarTexturasTablero()
 {
@@ -170,14 +166,22 @@ void cargarTexturasTablero()
         }
     }
 
-    for(int i = 0; i < NUM_GATOS; i++){
+    // Se buscan gato01, gato02, gato03... hasta que falte alguno. Antes la lista
+    // estaba escrita a mano en el codigo; asi, agregar gato16 es dejar el archivo
+    // en la carpeta y ya: ni recompilar ni editar nada.
+    for(int n = 1; n <= MAX_GATOS; n++){
 
-        // Se pregunta antes de cargar para distinguir dos fallas distintas: que el
-        // archivo no este, o que este pero no se pueda leer como imagen.
-        if(!FileExists(RUTAS_GATOS[i])) continue;
+        // TextFormat arma la ruta con el cero adelante: gato01, no gato1. Por eso
+        // los archivos se nombraron asi desde el principio.
+        const char* ruta = TextFormat("recursos/gato%02d.png", n);
 
-        Texture2D tex = LoadTexture(RUTAS_GATOS[i]);
-        if(!IsTextureValid(tex)) continue;
+        // El primer hueco corta la busqueda. Si faltara gato07, los de despues
+        // tampoco se cargan: mejor eso que una baraja con agujeros silenciosos
+        // donde dos parejas distintas comparten dibujo.
+        if(!FileExists(ruta)) break;
+
+        Texture2D tex = LoadTexture(ruta);
+        if(!IsTextureValid(tex)) break;
 
         // Una mipmap es la misma imagen guardada ya reducida a la mitad, a la
         // cuarta parte, y asi. Sin ellas, dibujar una imagen de 320 px a 102 obliga
@@ -190,8 +194,7 @@ void cargarTexturasTablero()
         // alcanza para reducciones chicas pero no para bajar de 320 a 102.
         SetTextureFilter(tex, TEXTURE_FILTER_TRILINEAR);
 
-        texturasGato[numTexturasCargadas]  = tex;
-        rutasCargadas[numTexturasCargadas] = RUTAS_GATOS[i];
+        texturasGato[numTexturasCargadas] = tex;
         numTexturasCargadas++;
     }
 }

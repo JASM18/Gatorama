@@ -19,6 +19,11 @@
 #include "ConfigPartida.hpp"
 #include "Configuracion.hpp"
 #include "Juego.hpp"
+#include "Creditos.hpp"
+#include "Puntajes.hpp"
+#include "Opciones.hpp"
+#include "Resultados.hpp"
+#include "Audio.hpp"
 
 // ***********************************************
 // CONFIGURACION DE LA VENTANA
@@ -55,6 +60,7 @@ int main()
     // la memoria de la tarjeta de video, y esa memoria no existe antes de que
     // InitWindow cree el contexto de OpenGL.
     cargarTexturasTablero();
+    IniciarAudio();
 
     Escena_Estado escenaActual = Escena_menu;
 
@@ -66,6 +72,12 @@ int main()
     // Loop principal del juego
     // Se sale por la X de la ventana o cuando el menu pide Escena_salir.
     while(!WindowShouldClose() && escenaActual != Escena_salir){
+
+        // La musica no se carga entera a memoria: se va leyendo del archivo por
+        // pedazos mientras suena, y esta llamada rellena el siguiente pedazo. Si
+        // se deja de llamar, la musica se corta aunque el archivo siga cargado.
+        // Va aqui arriba para que suene igual en todas las pantallas.
+        ActualizarAudio();
 
         // -------------------------------------------
         // ACTUALIZAR: leer entrada y cambiar el estado
@@ -81,7 +93,13 @@ int main()
 
                 // Se le avisa a la configuracion que va a entrar, para que llegue
                 // sin el cursor parado en un campo de la visita anterior.
-                if(siguiente == Escena_configuracion) PrepararConfiguracion();
+                // La configuracion se rehace al entrar: cada nino que llega
+                // empieza en "Player 1", no con el nombre del anterior.
+                if(siguiente == Escena_configuracion) PrepararConfiguracion(config);
+
+                // La tabla se relee al entrar: es justo el momento en que importa
+                // que este al dia con lo que se acaba de jugar.
+                if(siguiente == Escena_puntajes) PrepararPuntajes();
 
                 escenaActual = siguiente;
             }
@@ -104,16 +122,28 @@ int main()
                 escenaActual = ActualizarJuego();
             break;
 
-            // Estas pantallas todavia no existen, asi que por ahora se comportan
-            // igual: ESC regresa al menu. Conforme cada una se implemente, saldra
-            // de esta lista y tendra su propio case.
-            case Escena_puntajes:
             case Escena_creditos:
+                escenaActual = ActualizarCreditos();
+            break;
 
-                if(IsKeyPressed(KEY_ESCAPE)){
-                    escenaActual = Escena_menu;
-                }
+            case Escena_puntajes:
+                escenaActual = ActualizarPuntajes();
+            break;
 
+            case Escena_opciones:
+                escenaActual = ActualizarOpciones();
+            break;
+
+            case Escena_resultados:
+            {
+                Escena_Estado siguiente = ActualizarResultados();
+
+                // "Jugar otra vez" regresa a la configuracion, y tambien limpia:
+                // el que sigue no hereda el nombre del que acaba de jugar.
+                if(siguiente == Escena_configuracion) PrepararConfiguracion(config);
+
+                escenaActual = siguiente;
+            }
             break;
 
             default: break;
@@ -137,11 +167,19 @@ int main()
                 break;
 
                 case Escena_puntajes:
-                    dibujarPantallaPendiente("MEJORES PUNTAJES");
+                    DibujarPuntajes();
+                break;
+
+                case Escena_opciones:
+                    DibujarOpciones();
+                break;
+
+                case Escena_resultados:
+                    DibujarResultados();
                 break;
 
                 case Escena_creditos:
-                    dibujarPantallaPendiente("CREDITOS");
+                    DibujarCreditos();
                 break;
 
                 case Escena_juego:
@@ -156,6 +194,7 @@ int main()
 
     // Y se liberan antes de cerrar, por la misma razon al reves: despues de
     // CloseWindow ya no hay a quien devolverle esa memoria.
+    CerrarAudio();
     LiberarPartida();
     descargarTexturasTablero();
 

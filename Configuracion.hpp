@@ -24,10 +24,14 @@
 /**
  * \brief Prepara la pantalla para entrar a ella.
  *
- * Quita el foco de los campos de texto, para que al volver del men&uacute; no se quede
- * escribiendo en un cuadro que el jugador ya ni recuerda haber tocado.
+ * **Deja la configuraci&oacute;n como nueva**: modo solitario, dificultad f&aacute;cil y los
+ * nombres otra vez en "Player 1" y "Player 2". En un stand cada ni&ntilde;o que llega
+ * empieza de cero, y encontrarse el nombre del anterior ya escrito confunde. De paso
+ * quita el foco de los campos de texto.
+ *
+ * \param config Configuraci&oacute;n a dejar en su estado inicial.
  */
-void PrepararConfiguracion();
+void PrepararConfiguracion(ConfigPartida& config);
 
 /**
  * \brief Procesa la entrada de la pantalla (una llamada por fotograma).

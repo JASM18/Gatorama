@@ -32,6 +32,7 @@ enum Escena_Estado {
     Escena_menu,
     Escena_configuracion,
     Escena_puntajes,
+    Escena_opciones,
     Escena_creditos,
     Escena_juego,
     Escena_resultados,

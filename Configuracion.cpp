@@ -99,8 +99,12 @@ static void escribirEn(char* destino)
 // ACTUALIZAR
 //***********************************************
 
-void PrepararConfiguracion()
+void PrepararConfiguracion(ConfigPartida& config)
 {
+    // Se rehace entera, no solo los nombres: si el nino anterior dejo Dificil y
+    // multijugador puestos, el siguiente arranca en un juego que no pidio.
+    config = configPorDefecto();
+
     campoConFoco = 0;
 }
 

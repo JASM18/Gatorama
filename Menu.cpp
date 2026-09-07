@@ -11,13 +11,14 @@
 
 #include "Menu.hpp"
 #include "Dibujo.hpp"
+#include "Boton.hpp"
 #include "Tema.hpp"
 
 //***********************************************
 // DATOS DEL MENU
 //***********************************************
 
-const int NUM_OPCIONES = 4;
+const int NUM_OPCIONES = 5;
 
 // Las etiquetas y el destino de cada opcion se guardan en dos arreglos paralelos:
 // ETIQUETAS[i] lleva a DESTINOS[i]. Se hace asi para que agregar una opcion al
@@ -28,6 +29,7 @@ const int NUM_OPCIONES = 4;
 static const char* ETIQUETAS[NUM_OPCIONES] = {
     "Jugar",
     "Mejores puntajes",
+    "Opciones",
     "Creditos",
     "Salir"
 };
@@ -35,6 +37,7 @@ static const char* ETIQUETAS[NUM_OPCIONES] = {
 static const Escena_Estado DESTINOS[NUM_OPCIONES] = {
     Escena_configuracion,
     Escena_puntajes,
+    Escena_opciones,
     Escena_creditos,
     Escena_salir
 };
@@ -49,6 +52,23 @@ static int opcionSeleccionada = 0;
 // MENU PRINCIPAL
 //***********************************************
 
+/**
+ * \brief La zona clicable de una opci&oacute;n del men&uacute;.
+ *
+ * Es m&aacute;s alta y ancha que su texto a prop&oacute;sito: en un stand se apunta r&aacute;pido y
+ * mal, y un blanco de 460 por 52 p&iacute;xeles perdona el pulso de un ni&ntilde;o de seis a&ntilde;os.
+ *
+ * \param indice Opci&oacute;n, desde cero.
+ * \return Su rect&aacute;ngulo en pantalla.
+ */
+static Rectangle zonaOpcion(int indice)
+{
+    const float ANCHO = 460.0f;
+
+    return rectangulo((GetScreenWidth() - ANCHO) / 2.0f,
+                      276.0f + indice * 62.0f, ANCHO, 52.0f);
+}
+
 Escena_Estado ActualizarMenu()
 {
     // IsKeyPressed es verdadero SOLO en el fotograma exacto en que la tecla baja.
@@ -62,8 +82,19 @@ Escena_Estado ActualizarMenu()
     // negativo es negativo: -1 % 4 da -1, no 3. Sumar primero lo evita.
     opcionSeleccionada = (opcionSeleccionada + NUM_OPCIONES) % NUM_OPCIONES;
 
+    // El raton manda sobre las flechas: si el puntero esta encima de una opcion,
+    // esa es la resaltada. Sin esta linea las dos formas de navegar se
+    // contradirian en pantalla -una cosa resaltada y otra bajo el cursor-.
+    for(int i = 0; i < NUM_OPCIONES; i++){
+        if(ratonEncima(zonaOpcion(i))) opcionSeleccionada = i;
+    }
+
     if(IsKeyPressed(KEY_ENTER)){
         return DESTINOS[opcionSeleccionada];
+    }
+
+    for(int i = 0; i < NUM_OPCIONES; i++){
+        if(botonClicado(zonaOpcion(i))) return DESTINOS[i];
     }
 
     // Nadie ha elegido nada: nos quedamos donde estamos.
@@ -83,7 +114,11 @@ void DibujarMenu()
 
         Color color   = seleccionada ? COLOR_SELECCION : COLOR_TEXTO;
         int   tamano  = seleccionada ? 38 : 32;
-        int   y       = 300 + i * 65;
+
+        // El texto se centra dentro de su zona clicable, para que lo que se ve y
+        // lo que responde al raton sean lo mismo.
+        Rectangle zona = zonaOpcion(i);
+        int       y    = (int)(zona.y + (zona.height - tamano) / 2.0f);
 
         // TextFormat es el sprintf de raylib: arma una cadena con formato.
         const char* etiqueta = seleccionada
@@ -93,5 +128,5 @@ void DibujarMenu()
         dibujarTextoCentrado(etiqueta, y, tamano, color);
     }
 
-    dibujarTextoCentrado("Flechas para moverte     Enter para elegir", 640, 20, COLOR_TENUE);
+    dibujarTextoCentrado("Clic para elegir     o flechas y Enter", 640, 20, COLOR_TENUE);
 }

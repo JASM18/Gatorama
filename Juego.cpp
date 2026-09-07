@@ -8,36 +8,47 @@
 #include "raylib.h"
 
 #include "Juego.hpp"
-#include "Tablero.hpp"
+#include "Partida.hpp"
 #include "VistaTablero.hpp"
 #include "Dificultad.hpp"
 #include "Pausa.hpp"
+#include "Instrucciones.hpp"
+#include "Puntajes.hpp"
+#include "Resultados.hpp"
 #include "Boton.hpp"
 #include "Dibujo.hpp"
 #include "Tema.hpp"
 
 //***********************************************
-// ESTADO DE LA PARTIDA
+// ESTADO DE LA PANTALLA
 //***********************************************
 
 // Cuanto se queda un par equivocado a la vista antes de taparse. Menos de medio
 // segundo no alcanza para memorizarlo y mas de un segundo se siente lento.
+//
+// Vive aqui y no en Partida a proposito: es una decision de cuanto tarda algo en
+// pantalla, no una regla del juego. Las reglas no deben saber de segundos.
 static const float ESPERA_OCULTAR = 0.9f;
 
-static Tablero*     tablero = 0;      ///< El modelo; se reserva al iniciar partida
-static ConfigPartida configActual;    ///< Con que se armo, para poder reiniciar
+// Cuanto se deja ver el tablero completo antes de pasar a la pantalla de
+// resultados. Cortar de inmediato no deja ver la ultima pareja que se destapo.
+static const float ESPERA_RESULTADOS = 1.6f;
 
-// Que cartas estan destapadas esperando comparacion. -1 significa "ninguna", igual
-// que en indiceCartaEnPunto: cero es una carta valida y confundirlos voltearia la
-// esquina del tablero.
-static int   primera        = -1;
-static int   segunda        = -1;
-static float esperaOcultar  = 0.0f;
+static Partida*      partida = 0;    ///< Las reglas y el tablero; se reserva al iniciar
+static ConfigPartida configActual;   ///< Con que se armo, para poder reiniciar
 
-static int   intentos       = 0;
-static float tiempo         = 0.0f;
-static int   cartaResaltada = -1;
-static bool  enPausa        = false;
+static float esperaOcultar   = 0.0f; ///< Lo que falta para tapar un par fallido
+static int   cartaResaltada  = -1;   ///< Carta bajo el puntero; -1 si ninguna
+static bool  enPausa         = false;
+static bool  enInstrucciones = false;
+static bool  resultadoGuardado = false;   ///< Para no anotar la misma partida dos veces
+static float esperaResultados  = 0.0f;    ///< Lo que falta para cambiar de pantalla
+
+// De donde se abrio la ventana de instrucciones. Si se abrio desde el tablero, al
+// cerrarla hay que regresar al juego; si se abrio desde la pausa, hay que regresar
+// a la pausa. Sin esta bandera, cerrar la ayuda del tablero dejaba el juego en
+// pausa sin que nadie la hubiera pedido.
+static bool  ayudaDesdePausa   = false;
 
 /**
  * \brief El acomodo de las cartas para el tablero actual.
@@ -48,8 +59,9 @@ static bool  enPausa        = false;
  */
 static DisenoTablero disenoActual()
 {
-    return calcularDiseno(tablero->Filas(), tablero->Columnas(),
-                          areaDelTablero(), RELACION_CARTA);
+    const Tablero& t = partida->ElTablero();
+
+    return calcularDiseno(t.Filas(), t.Columnas(), areaDelTablero(), RELACION_CARTA);
 }
 
 /**
@@ -61,118 +73,118 @@ static Rectangle botonDePausa()
     return rectangulo(20.0f, 18.0f, 120.0f, 40.0f);
 }
 
+/**
+ * \brief El bot&oacute;n de ayuda, arriba a la derecha, como en el boceto.
+ * \return Su rect&aacute;ngulo en pantalla.
+ */
+static Rectangle botonDeAyuda()
+{
+    return rectangulo(GetScreenWidth() - 60.0f, 18.0f, 40.0f, 40.0f);
+}
+
+/**
+ * \brief El recuadro del marcador de un jugador.
+ * \param jugador 0 para el de la izquierda, 1 para el de la derecha.
+ * \return Su rect&aacute;ngulo en pantalla.
+ */
+static Rectangle bloqueJugador(int jugador)
+{
+    const float ANCHO = 330.0f;
+
+    if(jugador == 0) return rectangulo(20.0f, 76.0f, ANCHO, 56.0f);
+
+    return rectangulo(GetScreenWidth() - 20.0f - ANCHO, 76.0f, ANCHO, 56.0f);
+}
+
 //***********************************************
 // ARMAR Y REINICIAR
 //***********************************************
-
-/**
- * \brief Deja el estado de la partida en cero, sin tocar el tablero.
- */
-static void limpiarEstado()
-{
-    primera        = -1;
-    segunda        = -1;
-    esperaOcultar  = 0.0f;
-    intentos       = 0;
-    tiempo         = 0.0f;
-    cartaResaltada = -1;
-    enPausa        = false;
-}
 
 void IniciarPartida(const ConfigPartida& config)
 {
     configActual = config;
 
     // Se libera la partida anterior antes de armar la nueva. Sin esto, cada vez
-    // que alguien saliera al menu y volviera a jugar se quedaria un tablero
-    // reservado sin que nadie lo pueda alcanzar: una fuga de las clasicas.
-    delete tablero;
-    tablero = 0;
+    // que alguien saliera al menu y volviera a jugar se quedaria una partida
+    // reservada sin que nadie la pueda alcanzar: una fuga de las clasicas.
+    delete partida;
+    partida = 0;
 
-    const InfoDificultad& nivel = DIFICULTADES[config.dificultad];
+    int jugadores = (config.modo == Modo_multijugador) ? 2 : 1;
 
     try {
-        tablero = new Tablero(nivel.filas, nivel.columnas);
+        partida = new Partida(config.dificultad, jugadores);
     }
-    catch(const Tablero::TableroInvalido&) {
-        // Solo puede pasar si alguien edita la tabla de dificultades y deja un
-        // tablero de total impar. No se puede jugar eso, pero tampoco se va a
-        // cerrar el juego enfrente de un nino: se cae de pie al tablero mas chico.
-        tablero = new Tablero(2, 5);
+    catch(const std::exception&) {
+        // Solo puede pasar si alguien deja mal la tabla de dificultades o el modo.
+        // No se puede jugar eso, pero tampoco se va a cerrar el juego enfrente de
+        // un nino: se cae de pie a una partida chica de un jugador.
+        partida = new Partida(Dificultad_facil, 1);
     }
 
-    limpiarEstado();
+    esperaOcultar     = 0.0f;
+    cartaResaltada    = -1;
+    enPausa           = false;
+    enInstrucciones   = false;
+    resultadoGuardado = false;
+    esperaResultados  = 0.0f;
+    ayudaDesdePausa   = false;
 }
 
 void ReiniciarPartida()
 {
-    if(tablero == 0) return;
+    if(partida == 0) return;
 
-    // Repartir vuelve a barajar sobre el mismo tablero, sin reservar de nuevo.
-    tablero->Repartir();
-    limpiarEstado();
+    partida->Reiniciar();
+
+    esperaOcultar     = 0.0f;
+    cartaResaltada    = -1;
+    enInstrucciones   = false;
+    resultadoGuardado = false;
+    esperaResultados  = 0.0f;
+    ayudaDesdePausa   = false;
 }
 
 void LiberarPartida()
 {
-    delete tablero;
-    tablero = 0;
+    delete partida;
+    partida = 0;
 }
 
 //***********************************************
 // ACTUALIZAR
 //***********************************************
 
-/**
- * \brief Atiende el clic sobre una carta y compara cuando ya hay dos destapadas.
- */
-static void intentarVoltear()
-{
-    if(cartaResaltada < 0) return;
-
-    Carta& elegida = tablero->EnIndice(cartaResaltada);
-
-    // Volver a picarle a una carta ya destapada no hace nada. Sin esta guarda se
-    // podria "emparejar" una carta consigo misma picandole dos veces seguidas.
-    if(elegida.EstaVolteada() || elegida.EstaEmparejada()) return;
-
-    elegida.Voltear();
-
-    if(primera == -1){
-        primera = cartaResaltada;
-        return;
-    }
-
-    segunda = cartaResaltada;
-    intentos++;
-
-    if(tablero->EnIndice(primera).HacePareja(elegida)){
-        // Acierto: se marcan de inmediato y quedan descubiertas para siempre.
-        tablero->EnIndice(primera).Emparejar();
-        tablero->EnIndice(segunda).Emparejar();
-
-        primera = -1;
-        segunda = -1;
-    } else {
-        // Error: se quedan a la vista un momento para poder memorizarlas, y el
-        // temporizador de abajo las tapa. Taparlas de inmediato haria imposible
-        // el juego.
-        esperaOcultar = ESPERA_OCULTAR;
-    }
-}
-
 Escena_Estado ActualizarJuego()
 {
     // Nadie deberia llegar aqui sin partida, pero si pasa es mejor regresar al
     // menu que desreferenciar un puntero nulo.
-    if(tablero == 0) return Escena_menu;
+    if(partida == 0) return Escena_menu;
+
+    // Las instrucciones van encima de la pausa, asi que se atienden primero: si
+    // estan abiertas, son ellas las que se quedan con el ESC.
+    if(enInstrucciones){
+        if(ActualizarInstrucciones()){
+            enInstrucciones = false;
+
+            // Se vuelve a donde se estaba: al panel de pausa si de ahi se abrio, o
+            // directo al tablero si se abrio con el boton de ayuda.
+            if(!ayudaDesdePausa) enPausa = false;
+        }
+
+        return Escena_juego;
+    }
 
     if(enPausa){
         AccionPausa accion = ActualizarPausa();
 
-        if(accion == Pausa_continuar)      enPausa = false;
-        else if(accion == Pausa_reiniciar) ReiniciarPartida();
-        else if(accion == Pausa_menu)      return Escena_menu;
+        if(accion == Pausa_continuar)           enPausa = false;
+        else if(accion == Pausa_reiniciar)      ReiniciarPartida();
+        else if(accion == Pausa_instrucciones){
+            enInstrucciones = true;
+            ayudaDesdePausa = true;
+        }
+        else if(accion == Pausa_menu)           return Escena_menu;
 
         // Se regresa aqui mismo: nada de lo de abajo corre. Eso es lo que congela
         // el reloj y lo que hace que los clics del panel no volteen cartas.
@@ -184,33 +196,62 @@ Escena_Estado ActualizarJuego()
         return Escena_juego;
     }
 
-    // Con el tablero resuelto el reloj se detiene: el tiempo final ya es el bueno.
-    if(tablero->EstaResuelto()) return Escena_juego;
-
-    // GetFrameTime da los segundos que duro el fotograma anterior. Sumarlo es lo
-    // que hace que el reloj mida tiempo real y no fotogramas: en una maquina lenta
-    // el juego va igual de rapido en segundos.
-    tiempo += GetFrameTime();
-
-    cartaResaltada = indiceCartaEnPunto(disenoActual(), GetMousePosition());
-
-    if(esperaOcultar > 0.0f){
-        esperaOcultar -= GetFrameTime();
-
-        if(esperaOcultar <= 0.0f){
-            tablero->EnIndice(primera).Ocultar();
-            tablero->EnIndice(segunda).Ocultar();
-
-            primera = -1;
-            segunda = -1;
-        }
-
-        // Mientras se resuelve el par no se aceptan clics. Si no, se podria
-        // destapar una tercera carta y quedarian tres a la vista.
+    // El boton de ayuda tambien pausa: leer las instrucciones no deberia costarle
+    // tiempo al jugador.
+    if(botonClicado(botonDeAyuda())){
+        enPausa         = true;   // congela el reloj mientras lee
+        enInstrucciones = true;
+        ayudaDesdePausa = false;  // al cerrar se vuelve al tablero, no a la pausa
         return Escena_juego;
     }
 
-    if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) intentarVoltear();
+    if(partida->Terminada()){
+
+        // La partida se anota en el archivo en cuanto termina, y una sola vez. Se
+        // hace aqui y no al salir de la pantalla porque en un stand alguien va a
+        // cerrar la ventana con la tacha, y lo que no se guardo se pierde.
+        if(!resultadoGuardado){
+            GuardarResultado(configActual, *partida);
+            PrepararResultados(configActual, *partida);
+
+            resultadoGuardado = true;
+            esperaResultados  = ESPERA_RESULTADOS;
+        }
+
+        esperaResultados -= GetFrameTime();
+
+        if(esperaResultados <= 0.0f) return Escena_resultados;
+
+        return Escena_juego;
+    }
+
+    // El reloj lo lleva la partida. Se le pasan los segundos que duro el fotograma
+    // anterior en vez de que ella los mida: asi el modelo no depende de raylib, y
+    // una prueba de consola puede simular una partida larga al instante. Partida
+    // se detiene sola cuando ya no quedan parejas.
+    partida->CorrerReloj(GetFrameTime());
+
+    cartaResaltada = indiceCartaEnPunto(disenoActual(), GetMousePosition());
+
+    // Un par equivocado se queda a la vista y luego se tapa. Quien decide CUANDO
+    // es esta pantalla; quien sabe QUE significa taparlo -romper la racha, pasar
+    // el turno- es Partida.
+    if(esperaOcultar > 0.0f){
+        esperaOcultar -= GetFrameTime();
+
+        if(esperaOcultar <= 0.0f) partida->ResolverFallo();
+
+        // Mientras se resuelve no se aceptan clics. Partida tambien los rechaza,
+        // pero salir aqui evita hasta recalcular el acomodo.
+        return Escena_juego;
+    }
+
+    if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && cartaResaltada >= 0){
+
+        if(partida->Voltear(cartaResaltada) == Volteo_fallo){
+            esperaOcultar = ESPERA_OCULTAR;
+        }
+    }
 
     return Escena_juego;
 }
@@ -232,49 +273,114 @@ static const char* comoReloj(float segundos)
 }
 
 /**
- * \brief Dibuja el marcador de arriba.
+ * \brief Dibuja el marcador de un jugador, resaltado si es su turno.
+ *
+ * El resaltado es lo &uacute;nico que le dice al jugador que le toca, as&iacute; que no es
+ * sutil: recuadro relleno, borde de color y la palabra TU TURNO.
+ *
+ * \param jugador 0 o 1.
+ */
+static void dibujarBloqueJugador(int jugador)
+{
+    Rectangle rec       = bloqueJugador(jugador);
+    bool      esSuTurno = (partida->TurnoActual() == jugador);
+
+    // En solitario no hay a quien pasarle el turno, asi que resaltar no informa
+    // nada: solo seria ruido. El recuadro se dibuja liso.
+    bool marcarTurno = esSuTurno && partida->NumJugadores() > 1;
+
+    if(marcarTurno){
+        DrawRectangleRounded(rec, 0.18f, 8, COLOR_BOTON);
+        DrawRectangleRoundedLinesEx(rec, 0.18f, 8, 3.0f, COLOR_BOTON_ACTIVO);
+    }
+
+    Color colorNombre = marcarTurno ? COLOR_BOTON_ACTIVO : COLOR_TEXTO;
+
+    DrawText(nombreDeJugador(configActual, jugador + 1),
+             (int)rec.x + 14, (int)rec.y + 7, 20, colorNombre);
+
+    DrawText(TextFormat("Pares %d    Puntos %d    Racha %d",
+                        partida->ParesDe(jugador),
+                        partida->PuntajeDe(jugador),
+                        partida->RachaDe(jugador)),
+             (int)rec.x + 14, (int)rec.y + 32, 16, COLOR_TEXTO);
+
+    if(marcarTurno){
+        const char* aviso = "TU TURNO";
+        int         ancho = MeasureText(aviso, 14);
+
+        DrawText(aviso, (int)(rec.x + rec.width - ancho - 14), (int)rec.y + 10,
+                 14, COLOR_BOTON_ACTIVO);
+    }
+}
+
+/**
+ * \brief Dibuja todo el marcador de arriba.
  */
 static void dibujarMarcador()
 {
     dibujarBoton(botonDePausa(), "Pausa", false);
+    dibujarBoton(botonDeAyuda(), "?", false);
 
-    dibujarTextoCentrado("GATORAMA", 16, 30, COLOR_TITULO);
+    dibujarTextoCentrado("GATORAMA", 14, 28, COLOR_TITULO);
 
     const InfoDificultad& nivel = DIFICULTADES[configActual.dificultad];
 
-    dibujarTextoCentrado(TextFormat("%s   %dx%d      Pares  %d / %d      Intentos  %d      Tiempo  %s",
+    dibujarTextoCentrado(TextFormat("%s  %dx%d      Intentos  %d      Tiempo  %s",
                                     nivel.nombre, nivel.filas, nivel.columnas,
-                                    tablero->ParesEncontrados(), tablero->NumeroDePares(),
-                                    intentos, comoReloj(tiempo)),
-                         62, 20, COLOR_TEXTO);
+                                    partida->Intentos(), comoReloj(partida->Tiempo())),
+                         50, 18, COLOR_TENUE);
 
-    // Los nombres se dibujan en las esquinas, uno por lado, como en el boceto. El
-    // segundo solo aparece en multijugador. Todavia no hay marcador por jugador
-    // porque los turnos son una regla y las reglas no estan cerradas.
-    DrawText(nombreDeJugador(configActual, 1), 20, 96, 20, COLOR_SELECCION);
-
-    if(configActual.modo == Modo_multijugador){
-        const char* dos = nombreDeJugador(configActual, 2);
-
-        DrawText(dos, GetScreenWidth() - 20 - MeasureText(dos, 20), 96, 20, COLOR_SELECCION);
+    for(int i = 0; i < partida->NumJugadores(); i++){
+        dibujarBloqueJugador(i);
     }
+}
+
+/**
+ * \brief Dibuja el mensaje de cierre cuando ya no quedan parejas.
+ */
+static void dibujarResultado()
+{
+    if(partida->NumJugadores() == 1){
+        dibujarTextoCentrado(TextFormat("Encontraste las %d parejas en %s   -   %d puntos",
+                                        partida->ElTablero().NumeroDePares(),
+                                        comoReloj(partida->Tiempo()),
+                                        partida->PuntajeDe(0)),
+                             GetScreenHeight() - 40, 22, COLOR_BOTON_ACTIVO);
+        return;
+    }
+
+    int ganador = partida->Ganador();
+
+    // Con 5, 9 y 15 parejas el empate es imposible, pero el mensaje existe por si
+    // algun dia se agrega un tablero de parejas pares.
+    if(ganador < 0){
+        dibujarTextoCentrado("Empate", GetScreenHeight() - 40, 22, COLOR_BOTON_ACTIVO);
+        return;
+    }
+
+    dibujarTextoCentrado(TextFormat("Gano %s con %d parejas",
+                                    nombreDeJugador(configActual, ganador + 1),
+                                    partida->ParesDe(ganador)),
+                         GetScreenHeight() - 40, 22, COLOR_BOTON_ACTIVO);
 }
 
 void DibujarJuego()
 {
-    if(tablero == 0) return;
+    if(partida == 0) return;
 
-    DisenoTablero diseno = disenoActual();
+    const Tablero& tablero = partida->ElTablero();
+    DisenoTablero  diseno  = disenoActual();
 
-    for(int fila = 0; fila < tablero->Filas(); fila++){
-        for(int columna = 0; columna < tablero->Columnas(); columna++){
+    for(int fila = 0; fila < tablero.Filas(); fila++){
+        for(int columna = 0; columna < tablero.Columnas(); columna++){
 
-            int          indice = fila * tablero->Columnas() + columna;
-            const Carta& carta  = tablero->En(fila, columna);
+            int          indice = fila * tablero.Columnas() + columna;
+            const Carta& carta  = tablero.En(fila, columna);
             Rectangle    rec    = rectanguloDeCarta(diseno, fila, columna);
 
             // El resaltado solo tiene sentido sobre una carta que se puede voltear.
-            // Iluminar una ya emparejada prometeria algo que no va a pasar.
+            // Iluminar una ya destapada prometeria algo que no va a pasar.
             bool resaltada = (indice == cartaResaltada)
                           && !carta.EstaVolteada()
                           && !enPausa;
@@ -289,15 +395,24 @@ void DibujarJuego()
 
     dibujarMarcador();
 
-    if(tablero->EstaResuelto()){
-        dibujarTextoCentrado(TextFormat("Encontraste las %d parejas en %s",
-                                        tablero->NumeroDePares(), comoReloj(tiempo)),
-                             GetScreenHeight() - 40, 24, COLOR_BOTON_ACTIVO);
+    // Aviso de baraja incompleta. Con menos gatos que parejas, dos parejas
+    // distintas comparten dibujo y el juego se vuelve imposible de ganar. Vale mas
+    // decirlo en pantalla que dejar que alguien lo descubra jugando.
+    if(numeroDeIlustraciones() < tablero.NumeroDePares()){
+        dibujarTextoCentrado(TextFormat("Faltan ilustraciones: hay %d y se necesitan %d",
+                                        numeroDeIlustraciones(), tablero.NumeroDePares()),
+                             136, 16, COLOR_TITULO);
+    }
+
+    if(partida->Terminada()){
+        dibujarResultado();
     } else {
         dibujarTextoCentrado("Clic para voltear una carta     ESC para pausar",
                              GetScreenHeight() - 38, 18, COLOR_TENUE);
     }
 
-    // La pausa va hasta el final para que quede encima de todo lo demas.
-    if(enPausa) DibujarPausa();
+    // Las ventanas van hasta el final para que queden encima de todo lo demas, y
+    // las instrucciones encima de la pausa.
+    if(enInstrucciones)  DibujarInstrucciones(configActual.modo);
+    else if(enPausa)     DibujarPausa();
 }

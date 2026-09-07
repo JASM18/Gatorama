@@ -75,3 +75,56 @@ void dibujarBoton(Rectangle rec, const char* etiqueta, bool seleccionado)
              (int)(rec.y + (rec.height - tamano) / 2.0f),
              tamano, textoColor);
 }
+
+//***********************************************
+// DESLIZADOR
+//***********************************************
+
+float valorDeslizador(Rectangle rec, float valorActual)
+{
+    if(!IsMouseButtonDown(MOUSE_BUTTON_LEFT)) return valorActual;
+
+    Vector2 raton = GetMousePosition();
+
+    // Se acepta el arrastre si el raton esta a la altura del deslizador, aunque se
+    // haya salido por los lados. Es lo que uno espera de una barra de volumen:
+    // arrastras de largo y se queda pegada en el maximo, no se suelta a medias.
+    const float TOLERANCIA = 14.0f;
+
+    if(raton.y < rec.y - TOLERANCIA)              return valorActual;
+    if(raton.y > rec.y + rec.height + TOLERANCIA) return valorActual;
+
+    float nuevo = (raton.x - rec.x) / rec.width;
+
+    if(nuevo < 0.0f) nuevo = 0.0f;
+    if(nuevo > 1.0f) nuevo = 1.0f;
+
+    return nuevo;
+}
+
+void dibujarDeslizador(Rectangle rec, float valor)
+{
+    if(valor < 0.0f) valor = 0.0f;
+    if(valor > 1.0f) valor = 1.0f;
+
+    // La barra de atras: todo el recorrido posible.
+    DrawRectangleRounded(rec, 1.0f, 8, COLOR_BOTON);
+
+    // La parte llena. Se dibuja encima y del mismo alto, asi el borde redondeado
+    // de la izquierda coincide con el de la barra y no se ve un escalon.
+    Rectangle lleno = rec;
+    lleno.width = rec.width * valor;
+
+    if(lleno.width > rec.height){
+        DrawRectangleRounded(lleno, 1.0f, 8, COLOR_BOTON_ACTIVO);
+    }
+
+    // La perilla marca donde va. Se mantiene dentro de la barra restandole su
+    // propio radio en los extremos, para que no se asome por fuera.
+    float radio  = rec.height * 0.85f;
+    float centro = rec.x + radio + (rec.width - radio * 2.0f) * valor;
+
+    Vector2 posicion = { centro, rec.y + rec.height / 2.0f };
+
+    DrawCircleV(posicion, radio, COLOR_SELECCION);
+}

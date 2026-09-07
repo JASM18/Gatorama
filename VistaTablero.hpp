@@ -24,7 +24,10 @@
  * compararla en pantalla contra 3:4 y 1:1. Todo el arte se dibuja con esta
  * relaci&oacute;n, as&iacute; que cambiarla obligar&iacute;a a rehacer las ilustraciones.
  */
-const float RELACION_CARTA = 2.0f / 3.0f;
+const float ANCHO_ARTE = 347.0f;   ///< Ancho de las ilustraciones, en p&iacute;xeles
+const float ALTO_ARTE  = 480.0f;   ///< Alto de las ilustraciones, en p&iacute;xeles
+
+const float RELACION_CARTA = ANCHO_ARTE / ALTO_ARTE;
 
 /**
  * \brief Resultado de acomodar una cuadr&iacute;cula de cartas dentro de un &aacute;rea.

@@ -22,16 +22,19 @@
  * \brief Lo que el jugador pidi&oacute; desde la ventana de pausa.
  */
 enum AccionPausa {
-    Pausa_ninguna,      ///< Sigue abierta, nadie ha elegido
-    Pausa_continuar,    ///< Cerrar y seguir jugando
-    Pausa_reiniciar,    ///< Volver a repartir esta misma partida
-    Pausa_menu          ///< Abandonar y regresar al men&uacute; principal
+    Pausa_ninguna,          ///< Sigue abierta, nadie ha elegido
+    Pausa_continuar,        ///< Cerrar y seguir jugando
+    Pausa_reiniciar,        ///< Volver a repartir esta misma partida
+    Pausa_instrucciones,    ///< Abrir la ventana de c&oacute;mo se juega
+    Pausa_menu              ///< Abandonar y regresar al men&uacute; principal
 };
 
 /**
  * \brief Procesa la entrada de la ventana de pausa (una llamada por fotograma).
  *
  * ESC hace lo mismo que el bot&oacute;n Continuar: la tecla que abre es la que cierra.
+ * El deslizador de volumen se atiende aqu&iacute; y avisa directamente al m&oacute;dulo de
+ * audio, porque el volumen no es una decisi&oacute;n de la partida.
  *
  * \return La acci&oacute;n elegida, o Pausa_ninguna si el jugador sigue viendo el panel.
  */
