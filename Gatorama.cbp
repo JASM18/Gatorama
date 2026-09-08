@@ -18,13 +18,26 @@
 			<Target title="Release">
 				<Option output="bin/Release/Gatorama" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Release/" />
-				<Option type="1" />
+				<!-- type 0 es aplicacion de ventana y type 1 de consola. Release va en 0
+				     para que al abrir el juego no salga una ventana negra atras. Debug se
+				     queda en 1 a proposito: ahi si queremos ver los mensajes de raylib. -->
+				<Option type="0" />
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-O2" />
 				</Compiler>
 				<Linker>
+					<!-- -s quita los simbolos de depuracion: el .exe pesa menos.
+
+					     -static es el que hace que el juego se pueda llevar a otra
+					     computadora. Sin el, el .exe pide libgcc_s_seh-1.dll y
+					     libstdc++-6.dll, que existen en la maquina de quien programa
+					     porque las trae MinGW, pero NO en una Windows recien instalada:
+					     alla el juego no abre y solo sale un cuadro de error. Con -static
+					     esas bibliotecas se meten dentro del .exe. Pesa unos 2.5 MB mas y
+					     ya no depende de nada que no traiga Windows. -->
 					<Add option="-s" />
+					<Add option="-static" />
 				</Linker>
 			</Target>
 		</Build>

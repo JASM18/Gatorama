@@ -130,6 +130,22 @@ static float separacionDe(int tamano)
     return tamano / 16.0f;
 }
 
+bool fuenteTieneCodigo(int codigo)
+{
+    // El ASCII imprimible siempre pasa: lo dibujan las dos fuentes, la del juego y
+    // la de fabrica que hace de respaldo.
+    if(codigo >= 32 && codigo <= 126) return true;
+
+    // Los acentos solo si la fuente propia esta cargada; si no, saldrian rotos.
+    if(!hayFuente) return false;
+
+    for(int i = 0; i < NUM_ACENTOS; i++){
+        if(ACENTOS[i] == codigo) return true;
+    }
+
+    return false;
+}
+
 void cargarFuenteDatos()
 {
     hayFuente = false;

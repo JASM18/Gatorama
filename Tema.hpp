@@ -32,6 +32,11 @@ const Color COLOR_TENUE     = { 124, 118, 136, 255 };   ///< Ayudas y notas al p
 
 // Colores de las cartas. El dorso y el resaltado solo se usan cuando falta el arte;
 // con las ilustraciones puestas, lo unico que se dibuja es el contorno.
+// El cafe de las letras del letrero del menu. Sale de botonesInactivo_fondo.png y
+// se usa como respaldo: si el letrero tiene un calado que la placa no alcanza a
+// cubrir, ahi se vera este color y no el fondo claro de la pantalla.
+const Color COLOR_LETRERO     = {  58,  45,  27, 255 };   ///< Letras caladas del men&uacute;
+
 const Color COLOR_CARTA_DORSO = { 228, 222, 234, 255 };   ///< Cara oculta sin arte
 const Color COLOR_CARTA_BORDE = {  20,  18,  26, 255 };   ///< Contorno de la carta
 const Color COLOR_CARTA_HOVER = { 210, 200, 220, 255 };   ///< Carta bajo el puntero

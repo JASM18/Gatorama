@@ -97,6 +97,22 @@ bool cargarTexturaSiEsta(const char* ruta, Texture2D* destino);
 void cargarFuenteDatos();
 
 /**
+ * \brief Dice si la fuente de datos puede dibujar ese car&aacute;cter.
+ *
+ * Sirve para filtrar lo que se teclea: de nada vale aceptar una letra que luego
+ * saldr&iacute;a como un cuadrito. Se pregunta aqu&iacute; en vez de comparar contra un rango en
+ * cada pantalla para que la lista de caracteres v&aacute;lidos viva en un solo lugar: el
+ * mismo que se le pasa a LoadFontEx.
+ *
+ * Si la fuente no carg&oacute;, solo acepta ASCII, porque el respaldo es la letra de
+ * f&aacute;brica y esa no sabe de acentos.
+ *
+ * \param codigo Punto de c&oacute;digo Unicode, tal como lo devuelve GetCharPressed().
+ * \return Verdadero si esa letra se puede dibujar.
+ */
+bool fuenteTieneCodigo(int codigo);
+
+/**
  * \brief Libera la fuente del juego. **Antes de CloseWindow()**.
  */
 void descargarFuenteDatos();

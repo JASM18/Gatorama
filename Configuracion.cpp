@@ -115,7 +115,17 @@ static void borrarUltima(char* destino)
 {
     int largo = (int)strlen(destino);
 
-    if(largo > 0) destino[largo - 1] = '\0';
+    if(largo <= 0) return;
+
+    // No se borra un byte, se borra una LETRA. En UTF-8 una acentuada ocupa dos
+    // bytes, y el segundo siempre empieza con los bits 10: quitar solo ese dejaria
+    // media letra y el nombre se veria como un simbolo roto. Se retrocede hasta el
+    // byte donde de verdad empieza el caracter.
+    int i = largo - 1;
+
+    while(i > 0 && ((unsigned char)destino[i] & 0xC0) == 0x80) i--;
+
+    destino[i] = '\0';
 }
 
 /**
@@ -135,13 +145,28 @@ static void escribirEn(char* destino)
 
         int largo = (int)strlen(destino);
 
-        // Se filtra a ASCII imprimible porque la fuente que trae raylib de fabrica
-        // no cubre mas que eso: una letra acentuada se veria como un simbolo raro.
-        // Y se revisa el largo ANTES de escribir: ese es el limite que evita
-        // pasarse del arreglo.
-        if(letra >= 32 && letra <= 125 && largo < LARGO_NOMBRE){
-            destino[largo]     = (char)letra;
-            destino[largo + 1] = '\0';
+        // Se le pregunta a la fuente en vez de comparar contra un rango escrito
+        // aqui. Asi la lista de letras validas esta en un solo lugar: si manana se
+        // hornea un signo nuevo, este campo lo acepta sin tocar esta linea.
+        if(fuenteTieneCodigo(letra)){
+
+            // Una letra acentuada NO ocupa un byte. Se guarda en UTF-8, que gasta
+            // uno para el ASCII y dos para nuestros acentos, asi que el limite se
+            // mide en bytes y no en letras: "Andres" cabe en seis y "Andres" con
+            // acento en siete. CodepointToUTF8 hace la conversion y de paso dice
+            // cuantos bytes salieron.
+            int         cuantos = 0;
+            const char* enUTF8  = CodepointToUTF8(letra, &cuantos);
+
+            // Se revisa ANTES de escribir: ese es el limite que evita pasarse del
+            // arreglo. Antes bastaba con mirar el largo; ahora una sola letra
+            // puede no caber aunque todavia quede un hueco de un byte.
+            if(largo + cuantos <= LARGO_NOMBRE){
+
+                for(int i = 0; i < cuantos; i++) destino[largo + i] = enUTF8[i];
+
+                destino[largo + cuantos] = '\0';
+            }
         }
 
         letra = GetCharPressed();
