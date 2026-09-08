@@ -319,6 +319,17 @@ void dibujarDorsoCarta(Rectangle rec, bool resaltada)
     DrawRectangleRoundedLinesEx(rec, REDONDEZ, SEGMENTOS, grosor, COLOR_CARTA_BORDE);
 }
 
+void dibujarCursorCarta(Rectangle rec, bool volteable)
+{
+    // Sobresale 5 px hacia el hueco entre cartas en vez de dibujarse encima del
+    // contorno. Encima competiria con el borde negro de la carta y con el arte;
+    // afuera se lee de un vistazo aunque la carta sea clara.
+    Rectangle anillo = { rec.x - 5.0f, rec.y - 5.0f, rec.width + 10.0f, rec.height + 10.0f };
+
+    DrawRectangleRoundedLinesEx(anillo, REDONDEZ, SEGMENTOS, 4.0f,
+                                volteable ? COLOR_SELECCION : COLOR_TENUE);
+}
+
 void dibujarFondoTablero()
 {
     if(!hayTablero) return;

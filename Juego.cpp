@@ -446,6 +446,13 @@ void DibujarJuego()
     // El tapete va primero: las cartas se reparten encima de el.
     dibujarFondoTablero();
 
+    // Donde va el anillo del cursor. Se anota aqui y se dibuja hasta despues del
+    // ciclo: si se pintara dentro, la carta siguiente lo taparia, porque el anillo
+    // sobresale hacia el hueco que comparten.
+    Rectangle recCursor       = { 0.0f, 0.0f, 0.0f, 0.0f };
+    bool      hayCursor       = false;
+    bool      cursorVolteable = false;
+
     for(int fila = 0; fila < tablero.Filas(); fila++){
         for(int columna = 0; columna < tablero.Columnas(); columna++){
 
@@ -453,19 +460,27 @@ void DibujarJuego()
             const Carta& carta  = tablero.En(fila, columna);
             Rectangle    rec    = rectanguloDeCarta(diseno, fila, columna);
 
-            // El resaltado solo tiene sentido sobre una carta que se puede voltear.
-            // Iluminar una ya destapada prometeria algo que no va a pasar.
-            bool resaltada = (indice == cartaResaltada)
-                          && !carta.EstaVolteada()
-                          && !enPausa;
+            bool esElCursor = (indice == cartaResaltada) && !enPausa;
 
+            // Aclarar la carta solo tiene sentido si se puede voltear: iluminar una
+            // ya destapada prometeria algo que no va a pasar. Marcar donde esta el
+            // cursor es otra cosa, y eso si hay que verlo siempre; de eso se encarga
+            // el anillo de abajo.
             if(carta.EstaVolteada()){
                 dibujarCaraCarta(rec, false, ilustracionDePareja(carta.IdPareja()));
             } else {
-                dibujarDorsoCarta(rec, resaltada);
+                dibujarDorsoCarta(rec, esElCursor);
+            }
+
+            if(esElCursor){
+                recCursor       = rec;
+                cursorVolteable = !carta.EstaVolteada();
+                hayCursor       = true;
             }
         }
     }
+
+    if(hayCursor) dibujarCursorCarta(recCursor, cursorVolteable);
 
     dibujarMarcador();
 

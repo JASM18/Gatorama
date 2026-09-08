@@ -130,6 +130,19 @@ int indiceCartaEnPunto(const DisenoTablero& diseno, Vector2 punto);
 void dibujarDorsoCarta(Rectangle rec, bool resaltada);
 
 /**
+ * \brief Dibuja el anillo que marca en qu&eacute; carta est&aacute; parado el teclado.
+ *
+ * Va aparte del resaltado de dibujarDorsoCarta a prop&oacute;sito: aquel aclara la carta
+ * y por eso desaparece cuando la carta ya est&aacute; destapada, que es justo cuando el
+ * jugador se perd&iacute;a. El anillo se dibuja siempre; lo que cambia es el color.
+ *
+ * \param rec       D&oacute;nde va, normalmente de rectanguloDeCarta().
+ * \param volteable Verdadero si darle Enter ah&iacute; hace algo. En morado se ve que la
+ *                  carta responde; en gris, que el cursor solo est&aacute; de paso.
+ */
+void dibujarCursorCarta(Rectangle rec, bool volteable);
+
+/**
  * \brief Carga las ilustraciones de los gatos.
  *
  * **Tiene que llamarse despu&eacute;s de InitWindow().** Una textura vive en la memoria de

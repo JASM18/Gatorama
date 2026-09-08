@@ -92,6 +92,32 @@ void DescargarTexturasConfiguracion()
 // ESCRITURA DE NOMBRES
 //***********************************************
 
+// Cuanto hay que tener apretado el retroceso antes de que empiece a borrar solo, y
+// cada cuanto quita una letra a partir de ahi. La espera larga es para que un toque
+// rapido quite una sola letra: sin ella, corregir una vocal borraria medio nombre.
+// Ya que arranco, va rapido, porque a esas alturas lo que se quiere es vaciar el
+// campo. 0.05 vacia un nombre de 12 letras en poco mas de medio segundo.
+static const float ESPERA_BORRADO = 0.4f;
+static const float RITMO_BORRADO  = 0.05f;
+
+// Cuanto lleva apretado el retroceso, y cuanto falta para la siguiente letra. Un
+// solo par de contadores para los dos campos: como solo se escribe en el que tiene
+// el enfoque, nunca hay dos borrados corriendo al mismo tiempo.
+static float tiempoRetroceso = 0.0f;
+static float proximoBorrado  = 0.0f;
+
+/**
+ * \brief Quita la ultima letra de un campo, si queda alguna.
+ *
+ * \param destino Cadena terminada en cero.
+ */
+static void borrarUltima(char* destino)
+{
+    int largo = (int)strlen(destino);
+
+    if(largo > 0) destino[largo - 1] = '\0';
+}
+
 /**
  * \brief Mete en un campo de texto lo que el jugador vaya tecleando.
  *
@@ -123,10 +149,37 @@ static void escribirEn(char* destino)
 
     // El borrado se pregunta aparte: el retroceso no es un caracter que se
     // escriba, es una tecla que quita.
+    //
+    // Se lleva a mano y no con IsKeyPressedRepeat porque esa usa el ritmo que tenga
+    // configurado Windows, que en una computadora prestada el dia del rally puede
+    // ser cualquiera. Aqui la espera y el ritmo son los mismos en toda maquina.
     if(IsKeyPressed(KEY_BACKSPACE)){
-        int largo = (int)strlen(destino);
 
-        if(largo > 0) destino[largo - 1] = '\0';
+        // El primer toque siempre quita una letra, sin esperar nada.
+        borrarUltima(destino);
+
+        tiempoRetroceso = 0.0f;
+        proximoBorrado  = 0.0f;
+
+    } else if(IsKeyDown(KEY_BACKSPACE)){
+
+        tiempoRetroceso += GetFrameTime();
+
+        if(tiempoRetroceso >= ESPERA_BORRADO){
+
+            proximoBorrado -= GetFrameTime();
+
+            if(proximoBorrado <= 0.0f){
+                borrarUltima(destino);
+
+                proximoBorrado = RITMO_BORRADO;
+            }
+        }
+
+    } else {
+        // Soltar la tecla reinicia la cuenta: la espera se mide desde que se
+        // aprieta, no desde que se abrio la pantalla.
+        tiempoRetroceso = 0.0f;
     }
 }
 
@@ -141,6 +194,11 @@ void PrepararConfiguracion(ConfigPartida& config)
     config = configPorDefecto();
 
     enfoque = CTRL_INICIAR;
+
+    // Por si se sale de la pantalla con el retroceso apretado: al volver, la cuenta
+    // arranca de cero y no borra de golpe el nombre que se acaba de poner.
+    tiempoRetroceso = 0.0f;
+    proximoBorrado  = 0.0f;
 }
 
 /**
