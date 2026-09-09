@@ -20,6 +20,7 @@
 //***********************************************
 
 // Los controles que recorre el teclado, en el orden en que se recorren.
+const int SIN_ENFOQUE    = -1;
 const int CTRL_SOLITARIO = 0;
 const int CTRL_MULTI     = 1;
 const int CTRL_FACIL     = 2;   // los tres niveles ocupan el 2, el 3 y el 4
@@ -28,13 +29,16 @@ const int CTRL_NOMBRE2   = 6;
 const int CTRL_INICIAR   = 7;
 const int NUM_CONTROLES  = 8;
 
-// Cual control tiene el enfoque. Tambien decide en que campo se escribe: si el
-// enfoque esta sobre un nombre, las letras van ahi. Un solo dato para las dos
-// cosas es lo que evita que el cursor parpadee en un campo y se escriba en otro.
+// Cual control esta resaltado. Un solo dato para el raton y el teclado: el raton lo
+// mueve cuando de verdad se mueve, las flechas cuando se presionan, y quien lo
+// tenga es el que se ve con anillo. Tambien decide en que campo se escribe: si esta
+// sobre un nombre, las letras van ahi. Es el mismo modelo que el cursor de cartas
+// del tablero (VistaTablero + Juego): empieza en nada y se limpia al salir de todo.
 //
-// Arranca en Iniciar para que Enter siga arrancando la partida de inmediato, como
-// antes de que existieran las flechas.
-static int enfoque = CTRL_INICIAR;
+// SIN_ENFOQUE al entrar: nada resaltado hasta que el jugador apunte o use las
+// flechas. Antes arrancaba en Iniciar y el boton se veia activo sin que nadie lo
+// tocara.
+static int enfoque = SIN_ENFOQUE;
 
 static Rectangle botonModo(int indice)
 {
@@ -60,32 +64,58 @@ static Rectangle botonIniciar()
 {
     Rectangle panel = panelResumen();
 
-    return rectangulo(panel.x + panel.width - 220.0f,
-                      panel.y + panel.height - 84.0f,
-                      180.0f, 56.0f);
+    // En la esquina inferior derecha del pergamino, como la firma al pie de un
+    // contrato: se elige la dificultad y los nombres arriba y se "firma" aqui para
+    // empezar. 210x105 mantiene la proporcion 2:1 del PNG para que "Iniciar" no se
+    // estire.
+    const float ANCHO = 210.0f;
+    const float ALTO  = 105.0f;
+
+    return rectangulo(panel.x + panel.width  - ANCHO - 20.0f,
+                      panel.y + panel.height - ALTO  - 16.0f,
+                      ANCHO, ALTO);
 }
 
 //***********************************************
 // ARTE DE LA PANTALLA
 //***********************************************
 
-// El panel del resumen. Mide 560x400, lo mismo que panelResumen().
+// El panel del resumen. Mide 560x400, lo mismo que panelResumen(). La lamina ya
+// trae dibujados el titulo y los rotulos -Modo, Dificultad, Jugador 1 y 2- con una
+// linea al lado de cada uno: el codigo solo pone el valor sobre la linea.
 static const char* RUTA_RESUMEN = "recursos/configResumen.png";
 
+// El boton Iniciar, en sus dos estados. Cada PNG es 240x120, con la palabra
+// "Iniciar" sobre transparente. Se dibuja el "activo" cuando el raton esta encima
+// o el teclado lo tiene enfocado, y el "inactivo" el resto del tiempo. Es la misma
+// idea que las placas del menu (botonesInactivo_fondo / botonActivo_fondo).
+static const char* RUTA_INICIAR_ACTIVO   = "recursos/botonIniciar_activo.png";
+static const char* RUTA_INICIAR_INACTIVO = "recursos/botonIniciar_inactivo.png";
+
 static Texture2D texturaResumen;
-static bool      hayResumen = false;
+static Texture2D texturaIniciarActivo;
+static Texture2D texturaIniciarInactivo;
+
+static bool hayResumen         = false;
+static bool hayIniciarActivo   = false;
+static bool hayIniciarInactivo = false;
 
 void CargarTexturasConfiguracion()
 {
-    hayResumen = cargarTexturaSiEsta(RUTA_RESUMEN, &texturaResumen);
+    hayResumen         = cargarTexturaSiEsta(RUTA_RESUMEN,           &texturaResumen);
+    hayIniciarActivo   = cargarTexturaSiEsta(RUTA_INICIAR_ACTIVO,    &texturaIniciarActivo);
+    hayIniciarInactivo = cargarTexturaSiEsta(RUTA_INICIAR_INACTIVO,  &texturaIniciarInactivo);
 }
 
 void DescargarTexturasConfiguracion()
 {
-    if(hayResumen){
-        UnloadTexture(texturaResumen);
-        hayResumen = false;
-    }
+    if(hayResumen)         UnloadTexture(texturaResumen);
+    if(hayIniciarActivo)   UnloadTexture(texturaIniciarActivo);
+    if(hayIniciarInactivo) UnloadTexture(texturaIniciarInactivo);
+
+    hayResumen         = false;
+    hayIniciarActivo   = false;
+    hayIniciarInactivo = false;
 }
 
 //***********************************************
@@ -218,12 +248,35 @@ void PrepararConfiguracion(ConfigPartida& config)
     // multijugador puestos, el siguiente arranca en un juego que no pidio.
     config = configPorDefecto();
 
-    enfoque = CTRL_INICIAR;
+    enfoque = SIN_ENFOQUE;
 
     // Por si se sale de la pantalla con el retroceso apretado: al volver, la cuenta
     // arranca de cero y no borra de golpe el nombre que se acaba de poner.
     tiempoRetroceso = 0.0f;
     proximoBorrado  = 0.0f;
+}
+
+/**
+ * \brief Qu&eacute; control est&aacute; bajo el puntero, o SIN_ENFOQUE si ninguno.
+ *
+ * \param config Configuraci&oacute;n actual, para saber si el segundo nombre existe.
+ */
+static int controlBajoElRaton(const ConfigPartida& config)
+{
+    if(ratonEncima(botonModo(0))) return CTRL_SOLITARIO;
+    if(ratonEncima(botonModo(1))) return CTRL_MULTI;
+
+    for(int i = 0; i < NUM_DIFICULTADES; i++){
+        if(ratonEncima(botonDificultad(i))) return CTRL_FACIL + i;
+    }
+
+    if(ratonEncima(campoNombre(1))) return CTRL_NOMBRE1;
+
+    if(config.modo == Modo_multijugador && ratonEncima(campoNombre(2))) return CTRL_NOMBRE2;
+
+    if(ratonEncima(botonIniciar())) return CTRL_INICIAR;
+
+    return SIN_ENFOQUE;
 }
 
 /**
@@ -244,6 +297,13 @@ static void moverEnfoqueConfiguracion(const ConfigPartida& config)
 
     if(paso == 0) return;
 
+    // La primera flecha estrena el enfoque sin saltarse nada: hacia adelante entra
+    // por el primer control, hacia atras por el ultimo.
+    if(enfoque == SIN_ENFOQUE){
+        enfoque = (paso > 0) ? CTRL_SOLITARIO : CTRL_INICIAR;
+        return;
+    }
+
     do {
         enfoque = (enfoque + paso + NUM_CONTROLES) % NUM_CONTROLES;
     } while(config.modo == Modo_solitario && enfoque == CTRL_NOMBRE2);
@@ -252,6 +312,16 @@ static void moverEnfoqueConfiguracion(const ConfigPartida& config)
 Escena_Estado ActualizarConfiguracion(ConfigPartida& config)
 {
     if(IsKeyPressed(KEY_ESCAPE)) return Escena_menu;
+
+    // El raton solo cuenta cuando de verdad se movio: si se leyera cada fotograma,
+    // pisaria al instante lo que se acaba de elegir con las flechas. Al moverse
+    // fuera de todos los controles, el enfoque se apaga. Es la misma regla que el
+    // cursor de cartas del tablero.
+    Vector2 movimientoRaton = GetMouseDelta();
+
+    if(movimientoRaton.x != 0.0f || movimientoRaton.y != 0.0f){
+        enfoque = controlBajoElRaton(config);
+    }
 
     moverEnfoqueConfiguracion(config);
 
@@ -387,52 +457,97 @@ void DibujarConfiguracion(const ConfigPartida& config)
     // ---- Resumen ----
     Rectangle panel = panelResumen();
 
+    const InfoDificultad& nivel = DIFICULTADES[config.dificultad];
+
+    const char* modoTexto = config.modo == Modo_solitario ? "Solitario" : "Multijugador";
+
     if(hayResumen){
+
         Rectangle origen  = { 0.0f, 0.0f,
                               (float)texturaResumen.width, (float)texturaResumen.height };
         Vector2   desfase = { 0.0f, 0.0f };
 
         DrawTexturePro(texturaResumen, origen, panel, desfase, 0.0f, WHITE);
+
+        // La lamina ya trae el titulo y los rotulos: aqui solo van los valores,
+        // sobre las lineas. Los desfases salieron de medir configResumen.png, que
+        // se dibuja calcado sobre panel (560x400), asi que un pixel de la imagen
+        // es un pixel de la pantalla. La dificultad se acorta a "nombre  FxC"
+        // porque en la version larga -"(N pares)"- no cabe en la linea.
+        const int XV     = (int)panel.x + 208;
+        const int TAMANO = 22;
+
+        dibujarDato(modoTexto, XV, (int)panel.y + 88,  TAMANO, COLOR_TEXTO);
+
+        dibujarDato(TextFormat("%s   %dx%d", nivel.nombre, nivel.filas, nivel.columnas),
+                    XV, (int)panel.y + 141, TAMANO, COLOR_TEXTO);
+
+        dibujarDato(nombreDeJugador(config, 1), XV, (int)panel.y + 198, TAMANO, COLOR_TEXTO);
+
+        // "Jugador 2:" esta impreso en la lamina siempre; en solitario su linea
+        // se queda vacia.
+        if(config.modo == Modo_multijugador){
+            dibujarDato(nombreDeJugador(config, 2), XV, (int)panel.y + 252, TAMANO, COLOR_TEXTO);
+        }
+
     } else {
-        // Sin imagen se dibuja el panel de siempre, para poder seguir trabajando
-        // en la pantalla aunque el arte no este.
+
+        // Sin lamina se dibuja el panel de texto de siempre -titulo, rotulos en
+        // una columna y valores en otra-, para poder seguir trabajando en la
+        // pantalla aunque el arte no este.
         DrawRectangleRounded(panel, 0.06f, 10, COLOR_PANEL);
         DrawRectangleRoundedLinesEx(panel, 0.06f, 10, 2.0f, COLOR_TENUE);
+
+        int x = (int)panel.x + 36;
+        int y = (int)panel.y + 40;
+
+        DrawText("Asi va a quedar", x, y, 24, COLOR_TITULO);
+
+        // El rotulo fijo va con la fuente de fabrica y el valor con la del juego.
+        // Se dibujan en dos columnas y no en una sola cadena con espacios: en una
+        // fuente donde cada letra mide distinto, alinear con espacios no alinea nada.
+        const int X_VALOR = x + 150;
+
+        DrawText("Modo:", x, y + 60, 22, COLOR_TENUE);
+        dibujarDato(modoTexto, X_VALOR, y + 60, 22, COLOR_TEXTO);
+
+        DrawText("Dificultad:", x, y + 96, 22, COLOR_TENUE);
+        dibujarDato(TextFormat("%s   %dx%d   (%d pares)",
+                               nivel.nombre, nivel.filas, nivel.columnas,
+                               (nivel.filas * nivel.columnas) / 2),
+                    X_VALOR, y + 96, 22, COLOR_TEXTO);
+
+        DrawText("Jugador:", x, y + 132, 22, COLOR_TENUE);
+        dibujarDato(nombreDeJugador(config, 1), X_VALOR, y + 132, 22, COLOR_TEXTO);
+
+        if(config.modo == Modo_multijugador){
+            DrawText("Jugador:", x, y + 168, 22, COLOR_TENUE);
+            dibujarDato(nombreDeJugador(config, 2), X_VALOR, y + 168, 22, COLOR_TEXTO);
+        }
     }
 
-    int x = (int)panel.x + 36;
-    int y = (int)panel.y + 40;
+    // ---- Boton Iniciar ----
+    Rectangle zonaIniciar = botonIniciar();
 
-    DrawText("Asi va a quedar", x, y, 24, COLOR_TITULO);
+    if(hayIniciarActivo && hayIniciarInactivo){
 
-    const InfoDificultad& nivel = DIFICULTADES[config.dificultad];
+        // Resaltado por raton o por teclado: en los dos casos se ve el activo.
+        bool      resaltado = ratonEncima(zonaIniciar) || enfoque == CTRL_INICIAR;
+        Texture2D tex       = resaltado ? texturaIniciarActivo : texturaIniciarInactivo;
 
-    // El rotulo fijo va con la fuente de fabrica y el valor con la del juego. Se
-    // dibujan en dos columnas y no en una sola cadena con espacios: en una fuente
-    // donde cada letra mide distinto, alinear con espacios no alinea nada.
-    const int X_VALOR = x + 150;
+        Rectangle origen  = { 0.0f, 0.0f, (float)tex.width, (float)tex.height };
+        Vector2   desfase = { 0.0f, 0.0f };
 
-    DrawText("Modo:", x, y + 60, 22, COLOR_TENUE);
-    dibujarDato(config.modo == Modo_solitario ? "Solitario" : "Multijugador",
-                X_VALOR, y + 60, 22, COLOR_TEXTO);
+        DrawTexturePro(tex, origen, zonaIniciar, desfase, 0.0f, WHITE);
 
-    DrawText("Dificultad:", x, y + 96, 22, COLOR_TENUE);
-    dibujarDato(TextFormat("%s   %dx%d   (%d pares)",
-                           nivel.nombre, nivel.filas, nivel.columnas,
-                           (nivel.filas * nivel.columnas) / 2),
-                X_VALOR, y + 96, 22, COLOR_TEXTO);
-
-    DrawText("Jugador:", x, y + 132, 22, COLOR_TENUE);
-    dibujarDato(nombreDeJugador(config, 1), X_VALOR, y + 132, 22, COLOR_TEXTO);
-
-    if(config.modo == Modo_multijugador){
-        DrawText("Jugador:", x, y + 168, 22, COLOR_TENUE);
-        dibujarDato(nombreDeJugador(config, 2), X_VALOR, y + 168, 22, COLOR_TEXTO);
+    } else {
+        // Sin las laminas, el boton dibujado de siempre.
+        dibujarBoton(zonaIniciar, "Iniciar", enfoque == CTRL_INICIAR);
     }
 
-    dibujarBoton(botonIniciar(), "Iniciar", true);
-
-    if(enfoque == CTRL_INICIAR) dibujarAnilloEnfoque(botonIniciar());
+    // La firma no lleva anillo de enfoque: el cambio de tinta -cafe a morada-
+    // cuando el raton entra o el teclado la elige ya dice cual esta a punto de
+    // activarse, y un recuadro sobre el pergamino rompia la ilusion.
 
     dibujarTextoCentrado("Flechas para moverte     ESC para volver     ENTER para iniciar",
                          GetScreenHeight() - 40, 18, COLOR_TENUE);
