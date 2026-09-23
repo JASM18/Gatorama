@@ -111,4 +111,18 @@ bool enfoqueActivado();
  */
 void dibujarAnilloEnfoque(Rectangle rec);
 
+/**
+ * \brief Marca una placa dibujada en el arte como elegida o bajo el cursor.
+ *
+ * Las pantallas con arte (puntajes, pausa) traen sus botones ya pintados en la
+ * imagen de fondo; esto solo pone encima la se&ntilde;al de estado. Es el &uacute;nico lugar
+ * que decide c&oacute;mo se ve eso: cuando llegue la textura de "seleccionado", se
+ * cambia aqu&iacute; y la heredan todas las placas del juego.
+ *
+ * \param rec        La placa.
+ * \param elegida    Si es la opci&oacute;n vigente (por ejemplo, el filtro que se ve).
+ * \param conEnfoque Si el rat&oacute;n o el teclado est&aacute;n sobre ella.
+ */
+void marcarPlaca(Rectangle rec, bool elegida, bool conEnfoque);
+
 #endif // BOTON_HPP_INCLUDED

@@ -19,6 +19,7 @@
 #include "ConfigPartida.hpp"
 #include "Configuracion.hpp"
 #include "Juego.hpp"
+#include "Pausa.hpp"
 #include "Creditos.hpp"
 #include "Puntajes.hpp"
 #include "Opciones.hpp"
@@ -62,6 +63,8 @@ int main()
     cargarTexturasTablero();
     CargarTexturasMenu();
     CargarTexturasConfiguracion();
+    CargarTexturasPuntajes();
+    CargarTexturasPausa();
     cargarFondoGeneral();
     cargarFuenteDatos();
     IniciarAudio();
@@ -224,6 +227,8 @@ int main()
     descargarTexturasTablero();
     DescargarTexturasMenu();
     DescargarTexturasConfiguracion();
+    DescargarTexturasPuntajes();
+    DescargarTexturasPausa();
     descargarFondoGeneral();
     descargarFuenteDatos();
 

@@ -42,8 +42,12 @@ const int CTRL_NIVEL     = 2;
 const int CTRL_COLUMNA   = 5;
 const int CTRL_VOLVER    = 9;
 const int NUM_CONTROLES  = 10;
+const int SIN_ENFOQUE    = -1;
 
-static int enfoque = CTRL_VOLVER;
+// Cual control esta resaltado. Mismo modelo que el cursor de cartas del tablero y
+// que la configuracion: empieza en nada, el raton lo mueve solo cuando de verdad se
+// mueve (y lo apaga al salir de todo), y las flechas lo estrenan.
+static int enfoque = SIN_ENFOQUE;
 
 // La categoria que se esta viendo. La tabla NO mezcla dificultades ni modos: un
 // puntaje de Dificil siempre le ganaria a uno de Facil por el tamano del tablero
@@ -113,49 +117,94 @@ void GuardarResultado(const ConfigPartida& config, const Partida& partida)
 }
 
 //***********************************************
-// PANTALLA
+// ARTE DE LA PANTALLA
 //***********************************************
+
+// La pantalla completa, 1280x720: cortinas, pergamino, titulo, las cinco placas de
+// filtro, los encabezados de la tabla con sus rayas y la placa de "Volver al
+// menu". Se dibuja en 0,0 y un pixel de la imagen es un pixel de la pantalla, asi
+// que todas las zonas de abajo se midieron directo sobre el PNG.
+static const char* RUTA_FONDO = "recursos/mejoresPuntajes.png";
+
+static Texture2D texturaFondo;
+static bool      hayFondo = false;
+
+void CargarTexturasPuntajes()
+{
+    hayFondo = cargarTexturaSiEsta(RUTA_FONDO, &texturaFondo);
+}
+
+void DescargarTexturasPuntajes()
+{
+    if(hayFondo) UnloadTexture(texturaFondo);
+
+    hayFondo = false;
+}
 
 //***********************************************
 // ACOMODO DE LA PANTALLA
 //***********************************************
 
-// Donde empieza cada columna. Las cuatro ordenables van en el mismo orden que el
-// enum ColumnaPuntaje, para que el indice sirva para las dos cosas.
-static const int X_LUGAR   = 200;
-static const int X_NOMBRE  = 250;
+// Las placas, medidas sobre mejoresPuntajes.png por su contorno exterior. No son
+// una formula de "x mas N por boton" porque estan dibujadas a mano: cada una quedo
+// de su tamano y a su altura.
+static const Rectangle PLACAS_MODO[2] = {
+    { 474.0f,  76.0f, 167.0f, 49.0f },   // Solo
+    { 653.0f,  77.0f, 170.0f, 51.0f }    // 1 vs 1
+};
 
-static const int X_COLUMNA[NUM_COLUMNAS_ORDEN] = { 520, 660, 790, 920 };
+static const Rectangle PLACAS_NIVEL[NUM_DIFICULTADES] = {
+    { 401.0f, 128.0f, 155.0f, 50.0f },   // Facil
+    { 563.0f, 127.0f, 162.0f, 50.0f },   // Normal
+    { 736.0f, 130.0f, 162.0f, 48.0f }    // Dificil
+};
 
-static const int Y_ENCABEZADO = 206;
-static const int Y_PRIMERO    = 250;
+static const Rectangle PLACA_VOLVER = { 512.0f, 641.0f, 249.0f, 65.0f };
+
+// Las columnas de la tabla, de raya a raya en el arte. La primera -"# Jugador"- no
+// se ordena; las otras cuatro van en el mismo orden que el enum ColumnaPuntaje.
+static const float X_RAYA_JUGADOR = 180.0f;
+static const float X_RAYAS[NUM_COLUMNAS_ORDEN + 1] = { 466.0f, 605.0f, 733.0f, 868.0f, 1060.0f };
+
+static const int X_LUGAR   = 214;
+static const int X_NOMBRE  = 262;
+
+static const float Y_ENCABEZADO = 188.0f;   // arriba de los titulos del arte
+static const float ALTO_ENCABEZADO = 46.0f; // hasta la raya horizontal (y = 234)
+
+static const int Y_PRIMERO    = 256;   // deja lugar a la flecha de orden
 static const int ALTO_RENGLON = 40;
+
+// Tinta cafe oscura, la del arte, para lo que se escribe sobre el pergamino.
+static const Color COLOR_TINTA = { 62, 46, 30, 255 };
 
 static Rectangle botonModo(int cual)
 {
-    return rectangulo(470.0f + cual * 180.0f, 84.0f, 160.0f, 40.0f);
+    return PLACAS_MODO[cual];
 }
 
 static Rectangle botonNivel(int cual)
 {
-    return rectangulo(399.0f + cual * 166.0f, 134.0f, 150.0f, 40.0f);
+    return PLACAS_NIVEL[cual];
 }
 
 /**
- * \brief La zona clicable del encabezado de una columna.
+ * \brief La zona clicable del encabezado de una columna: la celda del arte entre
+ *        sus dos rayas, del t&iacute;tulo a la raya horizontal.
  * \param columna Columna, desde cero.
  * \return Su rect&aacute;ngulo en pantalla.
  */
 static Rectangle zonaEncabezado(int columna)
 {
-    return rectangulo((float)X_COLUMNA[columna] - 12.0f, (float)Y_ENCABEZADO - 8.0f,
-                      116.0f, 32.0f);
+    float izquierda = X_RAYAS[columna];
+    float derecha   = X_RAYAS[columna + 1];
+
+    return rectangulo(izquierda + 3.0f, Y_ENCABEZADO, derecha - izquierda - 6.0f, ALTO_ENCABEZADO);
 }
 
 static Rectangle botonVolver()
 {
-    return rectangulo((GetScreenWidth() - 220.0f) / 2.0f,
-                      GetScreenHeight() - 74.0f, 220.0f, 48.0f);
+    return PLACA_VOLVER;
 }
 
 void PrepararPuntajes()
@@ -169,7 +218,7 @@ void PrepararPuntajes()
     dificultadFiltro = Dificultad_facil;
     columnaOrden     = Columna_puntos;
     descendente      = true;
-    enfoque          = CTRL_VOLVER;
+    enfoque          = SIN_ENFOQUE;
 
     recalcularMejores();
 }
@@ -190,6 +239,18 @@ static Rectangle zonaControl(int control)
     if(control < CTRL_VOLVER)  return zonaEncabezado(control - CTRL_COLUMNA);
 
     return botonVolver();
+}
+
+/**
+ * \brief Qu&eacute; control est&aacute; bajo el puntero, o SIN_ENFOQUE si ninguno.
+ */
+static int controlBajoElRaton()
+{
+    for(int i = 0; i < NUM_CONTROLES; i++){
+        if(ratonEncima(zonaControl(i))) return i;
+    }
+
+    return SIN_ENFOQUE;
 }
 
 /**
@@ -229,17 +290,30 @@ static void activarControl(int control)
 
 Escena_Estado ActualizarPuntajes()
 {
-    // El raton manda sobre el teclado: lo que esta bajo el puntero toma el enfoque.
-    for(int i = 0; i < NUM_CONTROLES; i++){
-        if(ratonEncima(zonaControl(i))) enfoque = i;
-    }
-
-    enfoque = moverEnfoque(enfoque, NUM_CONTROLES, true);
-
     if(IsKeyPressed(KEY_ESCAPE))    return Escena_menu;
     if(botonClicado(botonVolver())) return Escena_menu;
 
-    if(enfoqueActivado()){
+    // El raton solo cuenta cuando de verdad se movio: si se leyera cada fotograma,
+    // pisaria al instante lo que se acaba de elegir con las flechas.
+    Vector2 movimientoRaton = GetMouseDelta();
+
+    if(movimientoRaton.x != 0.0f || movimientoRaton.y != 0.0f){
+        enfoque = controlBajoElRaton();
+    }
+
+    bool adelante = IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_RIGHT);
+    bool atras    = IsKeyPressed(KEY_UP)   || IsKeyPressed(KEY_LEFT);
+
+    if(enfoque == SIN_ENFOQUE){
+        // La primera flecha estrena el enfoque: hacia adelante por el primer
+        // filtro, hacia atras por "Volver".
+        if(adelante)   enfoque = CTRL_MODO;
+        else if(atras) enfoque = CTRL_VOLVER;
+    } else {
+        enfoque = moverEnfoque(enfoque, NUM_CONTROLES, true);
+    }
+
+    if(enfoqueActivado() && enfoque != SIN_ENFOQUE){
         if(enfoque == CTRL_VOLVER) return Escena_menu;
 
         activarControl(enfoque);
@@ -280,14 +354,37 @@ static Color colorDeLugar(int lugar)
     if(lugar == 0) return COLOR_BOTON_ACTIVO;   // el primero resalta
     if(lugar < 3)  return COLOR_SELECCION;      // segundo y tercero, un poco
 
-    return COLOR_TEXTO;
+    return hayFondo ? COLOR_TINTA : COLOR_TEXTO;
+}
+
+/**
+ * \brief Una flechita que dice hacia d&oacute;nde ordena la columna activa.
+ *
+ * Tri&aacute;ngulo y no una letra "v": con la fuente de f&aacute;brica se ve como una ve.
+ *
+ * \param x      Centro horizontal.
+ * \param y      Centro vertical.
+ * \param abajo  Verdadero si ordena de mayor a menor.
+ * \param color  Color.
+ */
+static void dibujarFlecha(float x, float y, bool abajo, Color color)
+{
+    const float MITAD = 6.0f;
+
+    // raylib dibuja los triangulos en sentido contrario a las manecillas.
+    if(abajo){
+        DrawTriangle({ x - MITAD, y - MITAD / 2 }, { x, y + MITAD / 2 + 2 }, { x + MITAD, y - MITAD / 2 }, color);
+    } else {
+        DrawTriangle({ x - MITAD, y + MITAD / 2 }, { x + MITAD, y + MITAD / 2 }, { x, y - MITAD / 2 - 2 }, color);
+    }
 }
 
 /**
  * \brief Dibuja el encabezado de una columna ordenable.
  *
- * La columna activa va en color y con una flecha que dice hacia d&oacute;nde ordena. Sin
- * esa flecha nadie sabe si est&aacute; viendo lo mejor o lo peor.
+ * Con el arte, el t&iacute;tulo ya est&aacute; impreso: solo se agrega el velo al pasar por
+ * encima y la flecha de la columna activa. Sin esa flecha nadie sabe si est&aacute;
+ * viendo lo mejor o lo peor.
  *
  * \param columna Columna, desde cero.
  */
@@ -296,23 +393,31 @@ static void dibujarEncabezado(int columna)
     Rectangle zona   = zonaEncabezado(columna);
     bool      activa = (columnaOrden == (ColumnaPuntaje)columna);
 
-    // Un fondo tenue al pasar el raton avisa que el encabezado se puede picar.
-    // Sin eso nadie adivina que la tabla se ordena desde ahi.
-    if(ratonEncima(zona)) DrawRectangleRounded(zona, 0.3f, 6, COLOR_BOTON);
+    // Un velo al pasar el raton avisa que el encabezado se puede picar. Sin eso
+    // nadie adivina que la tabla se ordena desde ahi.
+    if(enfoque == CTRL_COLUMNA + columna){
+        DrawRectangleRounded(zona, 0.3f, 6, Fade(WHITE, 0.30f));
+    }
 
-    if(enfoque == CTRL_COLUMNA + columna) dibujarAnilloEnfoque(zona);
+    if(hayFondo){
+        // La flecha va centrada justo debajo de la raya del encabezado: en la
+        // celda no cabe junto al titulo sin encimarse con la ultima letra.
+        if(activa){
+            dibujarFlecha(zona.x + zona.width / 2.0f, zona.y + zona.height + 8.0f,
+                          descendente, COLOR_TINTA);
+        }
+        return;
+    }
 
     const char* titulo = tituloDeColumna((ColumnaPuntaje)columna);
     Color       color  = activa ? COLOR_BOTON_ACTIVO : COLOR_TENUE;
+    int         x      = (int)zona.x + 12;
+    int         y      = (int)(zona.y + 14.0f);
 
-    DrawText(titulo, X_COLUMNA[columna], Y_ENCABEZADO, 18, color);
+    DrawText(titulo, x, y, 18, color);
 
     if(activa){
-        // La flecha va a la derecha del titulo. Hacia arriba de menor a mayor,
-        // hacia abajo de mayor a menor, como en el explorador de archivos.
-        int desplazado = X_COLUMNA[columna] + MeasureText(titulo, 18) + 6;
-
-        DrawText(descendente ? "v" : "^", desplazado, Y_ENCABEZADO, 18, COLOR_BOTON_ACTIVO);
+        dibujarFlecha(x + MeasureText(titulo, 18) + 12.0f, y + 9.0f, descendente, COLOR_BOTON_ACTIVO);
     }
 }
 
@@ -321,12 +426,16 @@ static void dibujarEncabezado(int columna)
  */
 static void dibujarTabla()
 {
-    DrawText("#",       X_LUGAR,  Y_ENCABEZADO, 18, COLOR_TENUE);
-    DrawText("Jugador", X_NOMBRE, Y_ENCABEZADO, 18, COLOR_TENUE);
+    if(!hayFondo){
+        DrawText("#",       X_LUGAR,  (int)Y_ENCABEZADO + 14, 18, COLOR_TENUE);
+        DrawText("Jugador", X_NOMBRE, (int)Y_ENCABEZADO + 14, 18, COLOR_TENUE);
+    }
 
     for(int i = 0; i < NUM_COLUMNAS_ORDEN; i++){
         dibujarEncabezado(i);
     }
+
+    Color tinta = hayFondo ? COLOR_TINTA : COLOR_TEXTO;
 
     for(int i = 0; i < numMejores; i++){
         const Puntaje& p = mejores[i];
@@ -337,51 +446,71 @@ static void dibujarTabla()
         dibujarDato(TextFormat("%d", i + 1), X_LUGAR,  y, 22, color);
         dibujarDato(p.nombre,                X_NOMBRE, y, 22, color);
 
-        // Los valores van en el mismo orden que las columnas del enum.
-        dibujarDato(TextFormat("%d", p.puntos), X_COLUMNA[Columna_puntos], y, 22, COLOR_TEXTO);
-        dibujarDato(TextFormat("%d", p.racha),  X_COLUMNA[Columna_racha],  y, 22, COLOR_TEXTO);
-        dibujarDato(TextFormat("%d", p.pares),  X_COLUMNA[Columna_pares],  y, 22, COLOR_TEXTO);
-        dibujarDato(comoReloj(p.tiempo),        X_COLUMNA[Columna_tiempo], y, 22, COLOR_TEXTO);
+        // Cada valor va centrado en su columna, entre las dos rayas del arte.
+        const char* valores[NUM_COLUMNAS_ORDEN];
+        valores[Columna_puntos] = TextFormat("%d", p.puntos);
+        valores[Columna_racha]  = TextFormat("%d", p.racha);
+        valores[Columna_pares]  = TextFormat("%d", p.pares);
+        valores[Columna_tiempo] = comoReloj(p.tiempo);
+
+        for(int c = 0; c < NUM_COLUMNAS_ORDEN; c++){
+            float centro = (X_RAYAS[c] + X_RAYAS[c + 1]) / 2.0f;
+
+            dibujarDato(valores[c], (int)(centro - anchoDato(valores[c], 22) / 2.0f), y, 22, tinta);
+        }
     }
 }
 
 void DibujarPuntajes()
 {
-    dibujarTextoCentrado("MEJORES PUNTAJES", 26, 34, COLOR_TITULO);
-
-    // ---- Categoria: modo y dificultad ----
-    dibujarBoton(botonModo(0), "Solo",   modoFiltro == Modo_solitario);
-    dibujarBoton(botonModo(1), "1 vs 1", modoFiltro == Modo_multijugador);
-
-    for(int i = 0; i < NUM_DIFICULTADES; i++){
-        dibujarBoton(botonNivel(i), DIFICULTADES[i].nombre,
-                     dificultadFiltro == (Dificultad)i);
+    if(hayFondo){
+        DrawTexture(texturaFondo, 0, 0, WHITE);
+    } else {
+        dibujarTextoCentrado("MEJORES PUNTAJES", 26, 34, COLOR_TITULO);
     }
 
-    // El anillo del enfoque, salvo en los encabezados: esos lo dibujan ellos
-    // mismos, porque solo existen cuando hay tabla que ordenar.
-    if(enfoque < CTRL_COLUMNA || enfoque == CTRL_VOLVER){
-        dibujarAnilloEnfoque(zonaControl(enfoque));
+    // ---- Categoria: modo y dificultad ----
+    const char* NOMBRES_MODO[2] = { "Solo", "1 vs 1" };
+
+    for(int i = 0; i < 2; i++){
+        bool elegida = (modoFiltro == (i == 0 ? Modo_solitario : Modo_multijugador));
+
+        if(hayFondo) marcarPlaca(botonModo(i), elegida, enfoque == CTRL_MODO + i);
+        else         dibujarBoton(botonModo(i), NOMBRES_MODO[i], elegida);
+    }
+
+    for(int i = 0; i < NUM_DIFICULTADES; i++){
+        bool elegida = (dificultadFiltro == (Dificultad)i);
+
+        if(hayFondo) marcarPlaca(botonNivel(i), elegida, enfoque == CTRL_NIVEL + i);
+        else         dibujarBoton(botonNivel(i), DIFICULTADES[i].nombre, elegida);
     }
 
     if(numMejores == 0){
         dibujarTextoCentrado("Nadie ha jugado en esta categoria todavia",
-                             300, 24, COLOR_TEXTO);
+                             380, 24, hayFondo ? COLOR_TINTA : COLOR_TEXTO);
 
         dibujarDatoCentrado(TextFormat("%s en %s",
                                        modoFiltro == Modo_solitario ? "Solo" : "1 vs 1",
                                        DIFICULTADES[dificultadFiltro].nombre),
-                            340, 20, COLOR_TENUE);
+                            420, 20, COLOR_TENUE);
+
+        // Sin tabla que ordenar, los encabezados no se dibujan; con el arte, sus
+        // titulos siguen impresos pero sin flecha.
     } else {
         dibujarTabla();
 
-        // Raya bajo los encabezados, para separarlos de los datos.
-        DrawLine(180, Y_ENCABEZADO + 30, GetScreenWidth() - 180, Y_ENCABEZADO + 30,
-                 COLOR_TENUE);
+        // Raya bajo los encabezados, para separarlos de los datos. El arte ya la trae.
+        if(!hayFondo){
+            DrawLine((int)X_RAYA_JUGADOR, (int)(Y_ENCABEZADO + ALTO_ENCABEZADO),
+                     (int)X_RAYAS[NUM_COLUMNAS_ORDEN], (int)(Y_ENCABEZADO + ALTO_ENCABEZADO),
+                     COLOR_TENUE);
+        }
     }
 
     dibujarTextoCentrado("Clic o flechas y Enter en Puntos, Racha, Pares o Tiempo para reordenar",
-                         GetScreenHeight() - 108, 16, COLOR_TENUE);
+                         612, 16, COLOR_TENUE);
 
-    dibujarBoton(botonVolver(), "Volver al menu", false);
+    if(hayFondo) marcarPlaca(botonVolver(), false, enfoque == CTRL_VOLVER);
+    else         dibujarBoton(botonVolver(), "Volver al menu", enfoque == CTRL_VOLVER);
 }

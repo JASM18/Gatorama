@@ -41,6 +41,16 @@ enum AccionPausa {
 AccionPausa ActualizarPausa();
 
 /**
+ * \brief Carga el arte del panel. **Despu&eacute;s de InitWindow()**.
+ */
+void CargarTexturasPausa();
+
+/**
+ * \brief Libera el arte del panel. **Antes de CloseWindow()**.
+ */
+void DescargarTexturasPausa();
+
+/**
  * \brief Deja la ventana lista para abrirse.
  *
  * Pone el enfoque del teclado en Continuar. Sin esto, al reabrir la pausa el

@@ -46,10 +46,39 @@ static const char* NOMBRES_SONIDO[NUM_SONIDOS] = { "Musica", "SFX" };
 // cuentan juntos porque las flechas los recorren como una sola lista.
 const int NUM_ENFOQUES_PAUSA = NUM_SONIDOS + NUM_BOTONES_PAUSA;
 
-static int enfoque = NUM_SONIDOS;   // arranca en Continuar
+const int SIN_ENFOQUE = -1;
+
+// Cual control esta resaltado. Mismo modelo que el cursor de cartas del tablero:
+// empieza en nada, el raton lo mueve solo cuando de verdad se mueve (y lo apaga al
+// salir de todo), y las flechas lo estrenan.
+static int enfoque = SIN_ENFOQUE;
 
 static const float PANEL_ANCHO = 440.0f;
 static const float PANEL_ALTO  = 526.0f;
+
+// El panel completo: marco, sol con "PAUSA", la tacha, los rotulos de Musica y
+// Sonido, las cuatro placas de los botones y la linea de ayuda. Mide 440x526,
+// igual que el panel, asi que un pixel de la imagen es un pixel del panel y todas
+// las zonas de abajo se midieron sobre el PNG.
+static const char* RUTA_PANEL = "recursos/pausa.png";
+
+static Texture2D texturaPanel;
+static bool      hayPanel = false;
+
+void CargarTexturasPausa()
+{
+    hayPanel = cargarTexturaSiEsta(RUTA_PANEL, &texturaPanel);
+}
+
+void DescargarTexturasPausa()
+{
+    if(hayPanel) UnloadTexture(texturaPanel);
+
+    hayPanel = false;
+}
+
+// Tinta cafe oscura, la del arte, para los porcentajes.
+static const Color COLOR_TINTA = { 62, 46, 30, 255 };
 
 /**
  * \brief El rect&aacute;ngulo del panel, centrado en la ventana.
@@ -74,8 +103,10 @@ static Rectangle barraVolumen(int cual)
 {
     Rectangle panel = panelPausa();
 
-    return rectangulo(panel.x + 40.0f, panel.y + 118.0f + cual * 62.0f,
-                      panel.width - 130.0f, 16.0f);
+    // A la derecha de los rotulos "Musica" (centro en y = 130) y "Sonido" (y = 189)
+    // del arte. Deja lugar a la derecha para el porcentaje.
+    return rectangulo(panel.x + 150.0f, panel.y + 122.0f + cual * 59.0f,
+                      195.0f, 16.0f);
 }
 
 /**
@@ -112,7 +143,8 @@ static Rectangle botonCerrar()
 {
     Rectangle panel = panelPausa();
 
-    return rectangulo(panel.x + 18.0f, panel.y + 18.0f, 42.0f, 42.0f);
+    // El cuadrito con la tacha, arriba a la izquierda del arte.
+    return rectangulo(panel.x + 21.0f, panel.y + 28.0f, 47.0f, 39.0f);
 }
 
 /**
@@ -122,17 +154,37 @@ static Rectangle botonCerrar()
  */
 static Rectangle botonPausa(int indice)
 {
+    // Las placas del arte, medidas por su contorno. Estan dibujadas a mano: cada
+    // una quedo de su tamano, por eso no salen de una formula.
+    static const Rectangle PLACAS[NUM_BOTONES_PAUSA] = {
+        { 47.0f, 240.0f, 326.0f, 48.0f },   // Continuar
+        { 46.0f, 305.0f, 329.0f, 45.0f },   // Reiniciar partida
+        { 47.0f, 360.0f, 330.0f, 46.0f },   // Como se juega
+        { 44.0f, 415.0f, 330.0f, 43.0f }    // Regresar al menu
+    };
+
     Rectangle panel = panelPausa();
+    Rectangle placa = PLACAS[indice];
 
-    const float MARGEN  = 40.0f;
-    const float ALTO    = 50.0f;
-    const float SEPARA  = 14.0f;
-    const float PRIMERO = 234.0f;   // debajo de las dos barras
+    return rectangulo(panel.x + placa.x, panel.y + placa.y, placa.width, placa.height);
+}
 
-    return rectangulo(panel.x + MARGEN,
-                      panel.y + PRIMERO + indice * (ALTO + SEPARA),
-                      panel.width - MARGEN * 2.0f,
-                      ALTO);
+/**
+ * \brief Qu&eacute; control est&aacute; bajo el puntero, o SIN_ENFOQUE si ninguno.
+ *
+ * La tacha no cuenta: no est&aacute; en el recorrido del teclado.
+ */
+static int controlBajoElRaton()
+{
+    for(int i = 0; i < NUM_SONIDOS; i++){
+        if(ratonEncima(barraVolumen(i))) return i;
+    }
+
+    for(int i = 0; i < NUM_BOTONES_PAUSA; i++){
+        if(ratonEncima(botonPausa(i))) return NUM_SONIDOS + i;
+    }
+
+    return SIN_ENFOQUE;
 }
 
 //***********************************************
@@ -141,26 +193,30 @@ static Rectangle botonPausa(int indice)
 
 void PrepararPausa()
 {
-    enfoque = NUM_SONIDOS;   // el primer boton, que es Continuar
+    enfoque = SIN_ENFOQUE;
 }
 
 AccionPausa ActualizarPausa()
 {
-    // El raton manda sobre el teclado: si el puntero esta encima de un control,
-    // ese toma el enfoque. Asi lo resaltado y lo que esta bajo el cursor no se
-    // contradicen en pantalla.
-    for(int i = 0; i < NUM_SONIDOS; i++){
-        if(ratonEncima(barraVolumen(i))) enfoque = i;
+    // El raton solo cuenta cuando de verdad se movio: si se leyera cada fotograma,
+    // pisaria al instante lo que se acaba de elegir con las flechas.
+    Vector2 movimientoRaton = GetMouseDelta();
+
+    if(movimientoRaton.x != 0.0f || movimientoRaton.y != 0.0f){
+        enfoque = controlBajoElRaton();
     }
 
-    for(int i = 0; i < NUM_BOTONES_PAUSA; i++){
-        if(ratonEncima(botonPausa(i))) enfoque = NUM_SONIDOS + i;
+    bool enBarra = (enfoque != SIN_ENFOQUE && enfoque < NUM_SONIDOS);
+
+    if(enfoque == SIN_ENFOQUE){
+        // La primera flecha estrena el enfoque: hacia abajo por la primera barra,
+        // hacia arriba por el ultimo boton.
+        if(IsKeyPressed(KEY_DOWN)) enfoque = 0;
+        if(IsKeyPressed(KEY_UP))   enfoque = NUM_ENFOQUES_PAUSA - 1;
+    } else {
+        // Sobre una barra, izquierda y derecha ajustan en vez de cambiar de control.
+        enfoque = moverEnfoque(enfoque, NUM_ENFOQUES_PAUSA, !enBarra);
     }
-
-    bool enBarra = (enfoque < NUM_SONIDOS);
-
-    // Sobre una barra, izquierda y derecha ajustan en vez de cambiar de control.
-    enfoque = moverEnfoque(enfoque, NUM_ENFOQUES_PAUSA, !enBarra);
 
     if(enBarra){
         // Se usa IsKeyDown y no IsKeyPressed para poder dejar la flecha apretada.
@@ -205,47 +261,72 @@ void DibujarPausa()
 
     Rectangle panel = panelPausa();
 
-    DrawRectangleRounded(panel, 0.08f, 10, COLOR_PANEL);
-    DrawRectangleRoundedLinesEx(panel, 0.08f, 10, 2.0f, COLOR_SELECCION);
+    if(hayPanel){
+        // El arte trae el titulo, los rotulos, la tacha, las placas y la ayuda.
+        DrawTexture(texturaPanel, (int)panel.x, (int)panel.y, WHITE);
 
-    dibujarBoton(botonCerrar(), "X", false);
+        marcarPlaca(botonCerrar(), false, ratonEncima(botonCerrar()));
+    } else {
+        DrawRectangleRounded(panel, 0.08f, 10, COLOR_PANEL);
+        DrawRectangleRoundedLinesEx(panel, 0.08f, 10, 2.0f, COLOR_SELECCION);
 
-    const char* titulo = "PAUSA";
-    int tamano = 40;
-    int ancho  = MeasureText(titulo, tamano);
+        dibujarBoton(botonCerrar(), "X", false);
 
-    DrawText(titulo,
-             (int)(panel.x + (panel.width - ancho) / 2.0f),
-             (int)(panel.y + 34.0f),
-             tamano, COLOR_TITULO);
+        const char* titulo = "PAUSA";
+        int tamano = 40;
+        int ancho  = MeasureText(titulo, tamano);
+
+        DrawText(titulo,
+                 (int)(panel.x + (panel.width - ancho) / 2.0f),
+                 (int)(panel.y + 34.0f),
+                 tamano, COLOR_TITULO);
+    }
 
     // ---- Volumen: musica y efectos ----
     for(int i = 0; i < NUM_SONIDOS; i++){
 
         Rectangle barra = barraVolumen(i);
 
-        DrawText(NOMBRES_SONIDO[i], (int)barra.x, (int)(barra.y - 28.0f), 20, COLOR_TEXTO);
+        if(!hayPanel){
+            DrawText(NOMBRES_SONIDO[i], (int)panel.x + 40, (int)(barra.y - 2.0f), 20, COLOR_TEXTO);
+        }
+
+        // Con enfoque, un velo claro detras de la barra en vez de un anillo: sobre
+        // el pergamino, un recuadro de color se ve pegado encima.
+        if(enfoque == i){
+            Rectangle velo = { barra.x - 10.0f, barra.y - 12.0f, barra.width + 70.0f, barra.height + 24.0f };
+
+            if(hayPanel) DrawRectangleRounded(velo, 0.5f, 8, Fade(WHITE, 0.35f));
+            else         dibujarAnilloEnfoque(barra);
+        }
 
         dibujarDeslizador(barra, volumenDe(i));
 
-        if(enfoque == i) dibujarAnilloEnfoque(barra);
-
         // El porcentaje va a la derecha de la barra, en el hueco que se le dejo.
         dibujarDato(TextFormat("%d%%", (int)(volumenDe(i) * 100.0f + 0.5f)),
-                    (int)(barra.x + barra.width + 22.0f),
+                    (int)(barra.x + barra.width + 18.0f),
                     (int)(barra.y - 4.0f),
-                    20, COLOR_TENUE);
+                    20, hayPanel ? COLOR_TINTA : COLOR_TENUE);
     }
 
     // ---- Botones ----
     for(int i = 0; i < NUM_BOTONES_PAUSA; i++){
-        // Ninguno va marcado como seleccionado: son acciones, no opciones entre
-        // las que se escoge una y se queda encendida.
-        dibujarBoton(botonPausa(i), ETIQUETAS_PAUSA[i], false);
 
-        if(enfoque == NUM_SONIDOS + i) dibujarAnilloEnfoque(botonPausa(i));
+        bool conEnfoque = (enfoque == NUM_SONIDOS + i);
+
+        // Ninguno va marcado como elegido: son acciones, no opciones entre las que
+        // se escoge una y se queda encendida.
+        if(hayPanel){
+            marcarPlaca(botonPausa(i), false, conEnfoque);
+        } else {
+            dibujarBoton(botonPausa(i), ETIQUETAS_PAUSA[i], false);
+
+            if(conEnfoque) dibujarAnilloEnfoque(botonPausa(i));
+        }
     }
 
-    dibujarTextoCentrado("Flechas y Enter     ESC para seguir jugando",
-                         (int)(panel.y + panel.height - 32.0f), 18, COLOR_TENUE);
+    if(!hayPanel){
+        dibujarTextoCentrado("Flechas y Enter     ESC para seguir jugando",
+                             (int)(panel.y + panel.height - 32.0f), 18, COLOR_TENUE);
+    }
 }

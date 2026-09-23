@@ -30,6 +30,16 @@
 void GuardarResultado(const ConfigPartida& config, const Partida& partida);
 
 /**
+ * \brief Carga el arte de la pantalla. **Despu&eacute;s de InitWindow()**.
+ */
+void CargarTexturasPuntajes();
+
+/**
+ * \brief Libera el arte de la pantalla. **Antes de CloseWindow()**.
+ */
+void DescargarTexturasPuntajes();
+
+/**
  * \brief Prepara la pantalla antes de entrar a ella.
  *
  * Vuelve a leer el archivo y deja seleccionada la primera pesta&ntilde;a.

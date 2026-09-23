@@ -161,3 +161,15 @@ void dibujarAnilloEnfoque(Rectangle rec)
 
     DrawRectangleRoundedLinesEx(anillo, 0.25f, 8, 3.0f, COLOR_SELECCION);
 }
+
+//***********************************************
+// PLACAS DEL ARTE
+//***********************************************
+
+void marcarPlaca(Rectangle rec, bool elegida, bool conEnfoque)
+{
+    // Por ahora, velos de color. Morado para lo elegido, blanco para lo que esta
+    // bajo el cursor; los dos se pueden juntar.
+    if(elegida)    DrawRectangleRounded(rec, 0.3f, 8, Fade(COLOR_BOTON_ACTIVO, 0.35f));
+    if(conEnfoque) DrawRectangleRounded(rec, 0.3f, 8, Fade(WHITE, 0.22f));
+}

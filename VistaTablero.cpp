@@ -8,6 +8,8 @@
  * \date 06/09/2026
  */
 
+#include <cmath>
+
 #include "raylib.h"
 
 #include "VistaTablero.hpp"
@@ -185,6 +187,91 @@ static int       numTexturasCargadas = 0;
 // del barajado del tablero, que decide DONDE queda cada carta.
 static int ordenIlustraciones[MAX_GATOS];
 
+/**
+ * \brief Carga la ilustraci&oacute;n de una carta con las esquinas ya redondeadas.
+ *
+ * La carta se dibuja con DrawTexturePro, que pinta la imagen como rect&aacute;ngulo, y
+ * el contorno redondeado va encima: las cuatro puntas del dibujo se asomaban por
+ * fuera de la curva. En vez de recortar al dibujar -que en raylib pide un shader-,
+ * se recortan una sola vez al cargar: las esquinas se vuelven transparentes.
+ *
+ * El radio sale igual que el de DrawRectangleRounded -REDONDEZ por la mitad del
+ * lado corto-, y como la imagen tiene la misma forma que la carta en pantalla, la
+ * curva del dibujo cae justo en el borde interior del contorno.
+ *
+ * \param ruta    Archivo a cargar.
+ * \param destino D&oacute;nde dejar la textura.
+ * \return Verdadero si qued&oacute; cargada.
+ */
+static bool cargarCartaRedondeada(const char* ruta, Texture2D* destino)
+{
+    if(!FileExists(ruta)) return false;
+
+    Image imagen = LoadImage(ruta);
+    if(!IsImageValid(imagen)) return false;
+
+    // Se pasa a RGBA de 8 bits para poder escribir la transparencia pixel por pixel.
+    ImageFormat(&imagen, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+
+    Color* pixeles = (Color*)imagen.data;
+    int    ancho   = imagen.width;
+    int    alto    = imagen.height;
+
+    float ladoCorto = (float)((ancho < alto) ? ancho : alto);
+    float radio     = REDONDEZ * ladoCorto / 2.0f;
+
+    // Solo se revisan los cuadros de las esquinas: el resto de la imagen no cambia.
+    int lado = (int)radio + 1;
+
+    for(int y = 0; y < alto; y++){
+
+        // Distancia al borde mas cercano, arriba o abajo.
+        int dy = (y < lado) ? y : (alto - 1 - y);
+        if(dy >= lado) continue;
+
+        for(int x = 0; x < ancho; x++){
+
+            int dx = (x < lado) ? x : (ancho - 1 - x);
+            if(dx >= lado) continue;
+
+            // Distancia del centro del pixel al centro de la curva. Lo que cae
+            // fuera del circulo se borra; el pixel del borde se deja a medias para
+            // que la curva no salga dentada.
+            float cx = radio - (dx + 0.5f);
+            float cy = radio - (dy + 0.5f);
+
+            if(cx <= 0.0f || cy <= 0.0f) continue;
+
+            float fuera = sqrtf(cx * cx + cy * cy) - radio;   // >0 afuera, <0 adentro
+
+            if(fuera >= 0.5f){
+                pixeles[y * ancho + x].a = 0;
+            } else if(fuera > -0.5f){
+                float cubre = 0.5f - fuera;                   // de 0 a 1
+                pixeles[y * ancho + x].a = (unsigned char)(pixeles[y * ancho + x].a * cubre);
+            }
+        }
+    }
+
+    *destino = LoadTextureFromImage(imagen);
+    UnloadImage(imagen);
+
+    if(!IsTextureValid(*destino)) return false;
+
+    // Una mipmap es la misma imagen guardada ya reducida a la mitad, a la
+    // cuarta parte, y asi. Sin ellas, dibujar una imagen de 347 px a 102 obliga
+    // a la tarjeta a saltarse pixeles del original, y el resultado tiembla y se
+    // ve dentado. Con mipmaps toma la copia del tamano mas cercano.
+    GenTextureMipmaps(destino);
+
+    // TRILINEAR es el filtro que sabe usar esas copias: mezcla las dos mas
+    // cercanas. BILINEAR sin mipmaps solo promedia vecinos del original, que
+    // alcanza para reducciones chicas pero no para bajar de 347 a 102.
+    SetTextureFilter(*destino, TEXTURE_FILTER_TRILINEAR);
+
+    return true;
+}
+
 void cargarTexturasTablero()
 {
     numTexturasCargadas = 0;
@@ -192,17 +279,7 @@ void cargarTexturasTablero()
     hayTablero = cargarTexturaSiEsta(RUTA_TABLERO, &texturaTablero);
 
     // El dorso primero: es el que se ve al empezar la partida.
-    hayDorso = false;
-
-    if(FileExists(RUTA_DORSO)){
-        texturaDorso = LoadTexture(RUTA_DORSO);
-        hayDorso     = IsTextureValid(texturaDorso);
-
-        if(hayDorso){
-            GenTextureMipmaps(&texturaDorso);
-            SetTextureFilter(texturaDorso, TEXTURE_FILTER_TRILINEAR);
-        }
-    }
+    hayDorso = cargarCartaRedondeada(RUTA_DORSO, &texturaDorso);
 
     // Se buscan gato01, gato02, gato03... hasta que falte alguno. Antes la lista
     // estaba escrita a mano en el codigo; asi, agregar gato16 es dejar el archivo
@@ -216,21 +293,8 @@ void cargarTexturasTablero()
         // El primer hueco corta la busqueda. Si faltara gato07, los de despues
         // tampoco se cargan: mejor eso que una baraja con agujeros silenciosos
         // donde dos parejas distintas comparten dibujo.
-        if(!FileExists(ruta)) break;
-
-        Texture2D tex = LoadTexture(ruta);
-        if(!IsTextureValid(tex)) break;
-
-        // Una mipmap es la misma imagen guardada ya reducida a la mitad, a la
-        // cuarta parte, y asi. Sin ellas, dibujar una imagen de 320 px a 102 obliga
-        // a la tarjeta a saltarse pixeles del original, y el resultado tiembla y se
-        // ve dentado. Con mipmaps toma la copia del tamano mas cercano.
-        GenTextureMipmaps(&tex);
-
-        // TRILINEAR es el filtro que sabe usar esas copias: mezcla las dos mas
-        // cercanas. BILINEAR sin mipmaps solo promedia vecinos del original, que
-        // alcanza para reducciones chicas pero no para bajar de 320 a 102.
-        SetTextureFilter(tex, TEXTURE_FILTER_TRILINEAR);
+        Texture2D tex;
+        if(!cargarCartaRedondeada(ruta, &tex)) break;
 
         texturasGato[numTexturasCargadas] = tex;
         numTexturasCargadas++;
