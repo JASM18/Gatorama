@@ -13,6 +13,9 @@ obj/
 # Puntajes de cada maquina: se generan jugando, no se comparten
 puntajes.json
 
+# Volumen elegido en cada maquina: igual que los puntajes, no se comparte
+settings.txt
+
 # Estado personal de Code::Blocks
 *.layout
 *.depend

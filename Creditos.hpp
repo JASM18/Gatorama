@@ -14,6 +14,16 @@
 #include "Escena.hpp"
 
 /**
+ * \brief Carga el arte de la pantalla. **Despu&eacute;s de InitWindow()**.
+ */
+void CargarTexturasCreditos();
+
+/**
+ * \brief Libera el arte de la pantalla. **Antes de CloseWindow()**.
+ */
+void DescargarTexturasCreditos();
+
+/**
  * \brief Procesa la entrada de la pantalla de cr&eacute;ditos.
  * \return Escena_menu si el jugador quiere volver, o Escena_creditos si sigue ah&iacute;.
  */

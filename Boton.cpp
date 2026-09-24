@@ -173,3 +173,42 @@ void marcarPlaca(Rectangle rec, bool elegida, bool conEnfoque)
     if(elegida)    DrawRectangleRounded(rec, 0.3f, 8, Fade(COLOR_BOTON_ACTIVO, 0.35f));
     if(conEnfoque) DrawRectangleRounded(rec, 0.3f, 8, Fade(WHITE, 0.22f));
 }
+
+//***********************************************
+// BOTON DE OPCIONES
+//***********************************************
+
+Rectangle zonaBotonOpciones()
+{
+    return rectangulo(GetScreenWidth() - 60.0f, 18.0f, 40.0f, 40.0f);
+}
+
+void dibujarBotonOpciones(Rectangle rec)
+{
+    // El fondo y el resaltado son los de cualquier boton; solo cambia la etiqueta.
+    dibujarBoton(rec, "", false);
+
+    Vector2 centro = { rec.x + rec.width / 2.0f, rec.y + rec.height / 2.0f };
+    float   radio  = rec.height * 0.26f;
+
+    // Ocho dientes: rectangulos girados alrededor del centro. El origen de
+    // DrawRectanglePro es el punto sobre el que gira, asi que se pone en el centro
+    // del engrane y el diente sale hacia afuera.
+    const int   DIENTES = 8;
+    const float ANCHO   = radio * 0.55f;
+    const float LARGO   = radio * 1.45f;
+
+    for(int i = 0; i < DIENTES; i++){
+        Rectangle diente = { centro.x, centro.y, ANCHO, LARGO };
+        Vector2   eje    = { ANCHO / 2.0f, LARGO };
+
+        DrawRectanglePro(diente, eje, i * (360.0f / DIENTES), COLOR_TEXTO);
+    }
+
+    DrawCircleV(centro, radio, COLOR_TEXTO);
+
+    // El hueco del centro, del color del boton para que se vea perforado.
+    Color fondo = ratonEncima(rec) ? COLOR_BOTON_HOVER : COLOR_BOTON;
+
+    DrawCircleV(centro, radio * 0.45f, fondo);
+}

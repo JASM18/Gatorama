@@ -13,6 +13,7 @@
 #include "Dificultad.hpp"
 #include "Pausa.hpp"
 #include "Instrucciones.hpp"
+#include "Opciones.hpp"
 #include "Puntajes.hpp"
 #include "Audio.hpp"
 #include "Resultados.hpp"
@@ -42,14 +43,10 @@ static float esperaOcultar   = 0.0f; ///< Lo que falta para tapar un par fallido
 static int   cartaResaltada  = -1;   ///< Carta bajo el puntero; -1 si ninguna
 static bool  enPausa         = false;
 static bool  enInstrucciones = false;
+static bool  enOpciones      = false;   ///< La ventana del engrane; tambien congela el reloj
 static bool  resultadoGuardado = false;   ///< Para no anotar la misma partida dos veces
 static float esperaResultados  = 0.0f;    ///< Lo que falta para cambiar de pantalla
 
-// De donde se abrio la ventana de instrucciones. Si se abrio desde el tablero, al
-// cerrarla hay que regresar al juego; si se abrio desde la pausa, hay que regresar
-// a la pausa. Sin esta bandera, cerrar la ayuda del tablero dejaba el juego en
-// pausa sin que nadie la hubiera pedido.
-static bool  ayudaDesdePausa   = false;
 
 /**
  * \brief El acomodo de las cartas para el tablero actual.
@@ -77,12 +74,13 @@ static Rectangle botonDePausa()
 }
 
 /**
- * \brief El bot&oacute;n de ayuda, arriba a la derecha, como en el boceto.
+ * \brief El bot&oacute;n de opciones -el engrane-, arriba a la derecha. Mismo lugar y
+ *        tama&ntilde;o que el del men&uacute;.
  * \return Su rect&aacute;ngulo en pantalla.
  */
-static Rectangle botonDeAyuda()
+static Rectangle botonDeOpciones()
 {
-    return rectangulo(GetScreenWidth() - 60.0f, 18.0f, 40.0f, 40.0f);
+    return zonaBotonOpciones();
 }
 
 /**
@@ -132,9 +130,9 @@ void IniciarPartida(const ConfigPartida& config)
     cartaResaltada    = -1;
     enPausa           = false;
     enInstrucciones   = false;
+    enOpciones        = false;
     resultadoGuardado = false;
     esperaResultados  = 0.0f;
-    ayudaDesdePausa   = false;
 }
 
 void ReiniciarPartida()
@@ -151,9 +149,9 @@ void ReiniciarPartida()
     esperaOcultar     = 0.0f;
     cartaResaltada    = -1;
     enInstrucciones   = false;
+    enOpciones        = false;
     resultadoGuardado = false;
     esperaResultados  = 0.0f;
-    ayudaDesdePausa   = false;
 }
 
 void LiberarPartida()
@@ -211,15 +209,19 @@ Escena_Estado ActualizarJuego()
     if(partida == 0) return Escena_menu;
 
     // Las instrucciones van encima de la pausa, asi que se atienden primero: si
-    // estan abiertas, son ellas las que se quedan con el ESC.
+    // estan abiertas, son ellas las que se quedan con el ESC. Solo se abren desde
+    // la pausa, asi que al cerrarlas se vuelve a ella.
     if(enInstrucciones){
-        if(ActualizarInstrucciones()){
-            enInstrucciones = false;
+        if(ActualizarInstrucciones()) enInstrucciones = false;
 
-            // Se vuelve a donde se estaba: al panel de pausa si de ahi se abrio, o
-            // directo al tablero si se abrio con el boton de ayuda.
-            if(!ayudaDesdePausa) enPausa = false;
-        }
+        return Escena_juego;
+    }
+
+    // La ventana de opciones tambien se queda con toda la entrada, y como se
+    // regresa antes de CorrerReloj, el tiempo no corre mientras esta abierta:
+    // subirle al volumen no deberia costarle segundos al jugador.
+    if(enOpciones){
+        if(ActualizarOpciones()) enOpciones = false;
 
         return Escena_juego;
     }
@@ -229,10 +231,7 @@ Escena_Estado ActualizarJuego()
 
         if(accion == Pausa_continuar)           enPausa = false;
         else if(accion == Pausa_reiniciar)      ReiniciarPartida();
-        else if(accion == Pausa_instrucciones){
-            enInstrucciones = true;
-            ayudaDesdePausa = true;
-        }
+        else if(accion == Pausa_instrucciones)  enInstrucciones = true;
         else if(accion == Pausa_menu)           return Escena_menu;
 
         // Se regresa aqui mismo: nada de lo de abajo corre. Eso es lo que congela
@@ -246,13 +245,9 @@ Escena_Estado ActualizarJuego()
         return Escena_juego;
     }
 
-    // El boton de ayuda tambien pausa: leer las instrucciones no deberia costarle
-    // tiempo al jugador.
-    if(botonClicado(botonDeAyuda())){
-        enPausa         = true;   // congela el reloj mientras lee
-        enInstrucciones = true;
-        ayudaDesdePausa = false;  // al cerrar se vuelve al tablero, no a la pausa
-        PrepararPausa();
+    if(botonClicado(botonDeOpciones())){
+        enOpciones = true;
+        PrepararOpciones();
         return Escena_juego;
     }
 
@@ -363,16 +358,23 @@ static void dibujarBloqueJugador(int jugador)
         DrawRectangleRoundedLinesEx(rec, 0.18f, 8, 3.0f, COLOR_BOTON_ACTIVO);
     }
 
-    Color colorNombre = marcarTurno ? COLOR_BOTON_ACTIVO : COLOR_TEXTO;
+    const char* nombre = nombreDeJugador(configActual, jugador + 1);
+    const char* marcas = TextFormat("Pares %d    Puntos %d    Racha %d",
+                                    partida->ParesDe(jugador),
+                                    partida->PuntajeDe(jugador),
+                                    partida->RachaDe(jugador));
 
-    dibujarDato(nombreDeJugador(configActual, jugador + 1),
-                (int)rec.x + 14, (int)rec.y + 7, 20, colorNombre);
+    int x = (int)rec.x + 14;
 
-    dibujarDato(TextFormat("Pares %d    Puntos %d    Racha %d",
-                           partida->ParesDe(jugador),
-                           partida->PuntajeDe(jugador),
-                           partida->RachaDe(jugador)),
-                (int)rec.x + 14, (int)rec.y + 32, 16, COLOR_TEXTO);
+    if(marcarTurno){
+        // Sobre el recuadro claro, los colores de siempre.
+        dibujarDato(nombre, x, (int)rec.y + 7,  20, COLOR_BOTON_ACTIVO);
+        dibujarDato(marcas, x, (int)rec.y + 32, 16, COLOR_TEXTO);
+    } else {
+        // Sin recuadro, el texto va directo sobre la madera.
+        dibujarDatoSobreFondo(nombre, x, (int)rec.y + 7,  20, COLOR_FONDO_TEXTO);
+        dibujarDatoSobreFondo(marcas, x, (int)rec.y + 32, 16, COLOR_FONDO_TENUE);
+    }
 
     if(marcarTurno){
         const char* aviso = "TU TURNO";
@@ -389,18 +391,18 @@ static void dibujarBloqueJugador(int jugador)
 static void dibujarMarcador()
 {
     dibujarBoton(botonDePausa(), "Pausa", false);
-    dibujarBoton(botonDeAyuda(), "?", false);
+    dibujarBotonOpciones(botonDeOpciones());
 
-    dibujarTextoCentrado("GATORAMA", 14, 28, COLOR_TITULO);
+    dibujarTextoCentradoSobreFondo("GATORAMA", 14, 28, COLOR_FONDO_TITULO);
 
     const InfoDificultad& nivel = DIFICULTADES[configActual.dificultad];
 
     // Baja hasta la altura de los marcadores de jugador, en el hueco que queda
     // entre los dos. Pegada al titulo se veia apretada, y ese hueco estaba vacio.
-    dibujarDatoCentrado(TextFormat("%s  %dx%d      Intentos  %d      Tiempo  %s",
-                                   nivel.nombre, nivel.filas, nivel.columnas,
-                                   partida->Intentos(), comoReloj(partida->Tiempo())),
-                        96, 18, COLOR_TENUE);
+    dibujarDatoCentradoSobreFondo(TextFormat("%s  %dx%d      Intentos  %d      Tiempo  %s",
+                                             nivel.nombre, nivel.filas, nivel.columnas,
+                                             partida->Intentos(), comoReloj(partida->Tiempo())),
+                                  96, 18, COLOR_FONDO_TEXTO);
 
     for(int i = 0; i < partida->NumJugadores(); i++){
         dibujarBloqueJugador(i);
@@ -413,11 +415,11 @@ static void dibujarMarcador()
 static void dibujarResultado()
 {
     if(partida->NumJugadores() == 1){
-        dibujarDatoCentrado(TextFormat("Encontraste las %d parejas en %s   -   %d puntos",
-                                       partida->ElTablero().NumeroDePares(),
-                                       comoReloj(partida->Tiempo()),
-                                       partida->PuntajeDe(0)),
-                            GetScreenHeight() - 40, 22, COLOR_BOTON_ACTIVO);
+        dibujarDatoCentradoSobreFondo(TextFormat("Encontraste las %d parejas en %s   -   %d puntos",
+                                                 partida->ElTablero().NumeroDePares(),
+                                                 comoReloj(partida->Tiempo()),
+                                                 partida->PuntajeDe(0)),
+                                      GetScreenHeight() - 40, 22, COLOR_FONDO_RESALTE);
         return;
     }
 
@@ -426,14 +428,14 @@ static void dibujarResultado()
     // Con 5, 9 y 15 parejas el empate es imposible, pero el mensaje existe por si
     // algun dia se agrega un tablero de parejas pares.
     if(ganador < 0){
-        dibujarTextoCentrado("Empate", GetScreenHeight() - 40, 22, COLOR_BOTON_ACTIVO);
+        dibujarTextoCentradoSobreFondo("Empate", GetScreenHeight() - 40, 22, COLOR_FONDO_RESALTE);
         return;
     }
 
-    dibujarDatoCentrado(TextFormat("Gano %s con %d parejas",
-                                   nombreDeJugador(configActual, ganador + 1),
-                                   partida->ParesDe(ganador)),
-                        GetScreenHeight() - 40, 22, COLOR_BOTON_ACTIVO);
+    dibujarDatoCentradoSobreFondo(TextFormat("Gano %s con %d parejas",
+                                             nombreDeJugador(configActual, ganador + 1),
+                                             partida->ParesDe(ganador)),
+                                  GetScreenHeight() - 40, 22, COLOR_FONDO_RESALTE);
 }
 
 void DibujarJuego()
@@ -460,7 +462,7 @@ void DibujarJuego()
             const Carta& carta  = tablero.En(fila, columna);
             Rectangle    rec    = rectanguloDeCarta(diseno, fila, columna);
 
-            bool esElCursor = (indice == cartaResaltada) && !enPausa;
+            bool esElCursor = (indice == cartaResaltada) && !enPausa && !enOpciones;
 
             // Aclarar la carta solo tiene sentido si se puede voltear: iluminar una
             // ya destapada prometeria algo que no va a pasar. Marcar donde esta el
@@ -488,20 +490,21 @@ void DibujarJuego()
     // distintas comparten dibujo y el juego se vuelve imposible de ganar. Vale mas
     // decirlo en pantalla que dejar que alguien lo descubra jugando.
     if(numeroDeIlustraciones() < tablero.NumeroDePares()){
-        dibujarDatoCentrado(TextFormat("Faltan ilustraciones: hay %d y se necesitan %d",
-                                       numeroDeIlustraciones(), tablero.NumeroDePares()),
-                            136, 16, COLOR_TITULO);
+        dibujarDatoCentradoSobreFondo(TextFormat("Faltan ilustraciones: hay %d y se necesitan %d",
+                                                 numeroDeIlustraciones(), tablero.NumeroDePares()),
+                                      136, 16, COLOR_FONDO_RESALTE);
     }
 
     if(partida->Terminada()){
         dibujarResultado();
     } else {
-        dibujarTextoCentrado("Clic o flechas y Enter para voltear     ESC para pausar",
-                             GetScreenHeight() - 38, 18, COLOR_TENUE);
+        dibujarTextoCentradoSobreFondo("Clic o flechas y Enter para voltear     ESC para pausar",
+                                       GetScreenHeight() - 38, 18, COLOR_FONDO_TENUE);
     }
 
     // Las ventanas van hasta el final para que queden encima de todo lo demas, y
     // las instrucciones encima de la pausa.
     if(enInstrucciones)  DibujarInstrucciones();
     else if(enPausa)     DibujarPausa();
+    else if(enOpciones)  DibujarOpciones();
 }

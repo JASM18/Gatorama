@@ -13,6 +13,7 @@
 #include "Dibujo.hpp"
 #include "Boton.hpp"
 #include "Instrucciones.hpp"
+#include "Opciones.hpp"
 #include "Tema.hpp"
 
 //***********************************************
@@ -30,18 +31,22 @@ const int NUM_OPCIONES = 5;
 static const char* ETIQUETAS[NUM_OPCIONES] = {
     "Jugar",
     "Mejores puntajes",
-    "Opciones",
+    "Instrucciones",
     "Creditos",
     "Salir"
 };
 
+// Instrucciones no cambia de escena: abre la ventana encima del menu. Su destino
+// es el menu mismo, y ActualizarMenu la trata aparte con OPCION_INSTRUCCIONES.
 static const Escena_Estado DESTINOS[NUM_OPCIONES] = {
     Escena_configuracion,
     Escena_puntajes,
-    Escena_opciones,
+    Escena_menu,
     Escena_creditos,
     Escena_salir
 };
+
+const int OPCION_INSTRUCCIONES = 2;
 
 // 'static' a nivel de archivo significa que esta variable solo existe dentro de
 // Menu.cpp: ningun otro archivo la puede ver ni modificar. Eso es lo que hace que
@@ -53,17 +58,20 @@ static int opcionSeleccionada = 0;
 // una escena por lo mismo que la pausa: el menu se sigue viendo debajo.
 static bool enInstrucciones = false;
 
+// Lo mismo para la ventana de opciones, que se abre con el engrane de la esquina.
+static bool enOpciones = false;
+
 /**
- * \brief El bot&oacute;n de ayuda, arriba a la derecha.
+ * \brief El bot&oacute;n de opciones -el engrane-, arriba a la derecha.
  *
  * Mismo lugar y mismo tama&ntilde;o que el del tablero, para que sea el mismo bot&oacute;n en
  * la cabeza de quien juega y no dos cosas parecidas en esquinas distintas.
  *
  * \return Su rect&aacute;ngulo en pantalla.
  */
-static Rectangle botonDeAyuda()
+static Rectangle botonDeOpciones()
 {
-    return rectangulo(GetScreenWidth() - 60.0f, 18.0f, 40.0f, 40.0f);
+    return zonaBotonOpciones();
 }
 
 //***********************************************
@@ -129,7 +137,7 @@ void DescargarTexturasMenu()
 static const Rectangle ZONAS_OPCION[NUM_OPCIONES] = {
     { 410.0f, 271.0f, 460.0f, 71.0f },   // Jugar
     { 410.0f, 342.0f, 460.0f, 65.0f },   // Mejores puntajes
-    { 410.0f, 407.0f, 460.0f, 59.0f },   // Opciones
+    { 410.0f, 407.0f, 460.0f, 59.0f },   // Instrucciones
     { 410.0f, 466.0f, 460.0f, 57.0f },   // Creditos
     { 410.0f, 523.0f, 460.0f, 61.0f }    // Salir
 };
@@ -161,8 +169,15 @@ Escena_Estado ActualizarMenu()
         return Escena_menu;
     }
 
-    if(botonClicado(botonDeAyuda())){
-        enInstrucciones = true;
+    if(enOpciones){
+        if(ActualizarOpciones()) enOpciones = false;
+
+        return Escena_menu;
+    }
+
+    if(botonClicado(botonDeOpciones())){
+        enOpciones = true;
+        PrepararOpciones();
         return Escena_menu;
     }
 
@@ -184,13 +199,20 @@ Escena_Estado ActualizarMenu()
         if(ratonEncima(zonaOpcion(i))) opcionSeleccionada = i;
     }
 
-    if(IsKeyPressed(KEY_ENTER)){
-        return DESTINOS[opcionSeleccionada];
-    }
+    int elegida = -1;
+
+    if(IsKeyPressed(KEY_ENTER)) elegida = opcionSeleccionada;
 
     for(int i = 0; i < NUM_OPCIONES; i++){
-        if(botonClicado(zonaOpcion(i))) return DESTINOS[i];
+        if(botonClicado(zonaOpcion(i))) elegida = i;
     }
+
+    if(elegida == OPCION_INSTRUCCIONES){
+        enInstrucciones = true;
+        return Escena_menu;
+    }
+
+    if(elegida >= 0) return DESTINOS[elegida];
 
     // Nadie ha elegido nada: nos quedamos donde estamos.
     return Escena_menu;
@@ -270,8 +292,9 @@ void DibujarMenu()
         dibujarMenuDeTexto();
     }
 
-    dibujarBoton(botonDeAyuda(), "?", false);
+    dibujarBotonOpciones(botonDeOpciones());
 
-    // La ventana va hasta el final, para que quede encima de todo lo demas.
+    // Las ventanas van hasta el final, para que queden encima de todo lo demas.
     if(enInstrucciones) DibujarInstrucciones();
+    if(enOpciones)      DibujarOpciones();
 }

@@ -125,4 +125,21 @@ void dibujarAnilloEnfoque(Rectangle rec);
  */
 void marcarPlaca(Rectangle rec, bool elegida, bool conEnfoque);
 
+/**
+ * \brief D&oacute;nde va el bot&oacute;n de opciones: arriba a la derecha, igual en todas las
+ *        pantallas. Vive aqu&iacute; para que no pueda quedar en un lugar distinto en cada una.
+ * \return Su rect&aacute;ngulo en pantalla.
+ */
+Rectangle zonaBotonOpciones();
+
+/**
+ * \brief Dibuja el bot&oacute;n de opciones: un bot&oacute;n con un engrane.
+ *
+ * Es el mismo en el men&uacute; y en el tablero, en la misma esquina, para que sea una
+ * sola cosa en la cabeza de quien juega.
+ *
+ * \param rec D&oacute;nde va.
+ */
+void dibujarBotonOpciones(Rectangle rec);
+
 #endif // BOTON_HPP_INCLUDED

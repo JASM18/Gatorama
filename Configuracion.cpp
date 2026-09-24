@@ -12,6 +12,7 @@
 #include "Configuracion.hpp"
 #include "Dificultad.hpp"
 #include "Boton.hpp"
+#include "Opciones.hpp"
 #include "Dibujo.hpp"
 #include "Tema.hpp"
 
@@ -39,6 +40,9 @@ const int NUM_CONTROLES  = 8;
 // flechas. Antes arrancaba en Iniciar y el boton se veia activo sin que nadie lo
 // tocara.
 static int enfoque = SIN_ENFOQUE;
+
+// La ventana del engrane, abierta encima de la configuracion.
+static bool enOpciones = false;
 
 static Rectangle botonModo(int indice)
 {
@@ -248,7 +252,8 @@ void PrepararConfiguracion(ConfigPartida& config)
     // multijugador puestos, el siguiente arranca en un juego que no pidio.
     config = configPorDefecto();
 
-    enfoque = SIN_ENFOQUE;
+    enfoque    = SIN_ENFOQUE;
+    enOpciones = false;
 
     // Por si se sale de la pantalla con el retroceso apretado: al volver, la cuenta
     // arranca de cero y no borra de golpe el nombre que se acaba de poner.
@@ -311,6 +316,20 @@ static void moverEnfoqueConfiguracion(const ConfigPartida& config)
 
 Escena_Estado ActualizarConfiguracion(ConfigPartida& config)
 {
+    // Con la ventana de opciones abierta, ella se queda con toda la entrada: el
+    // ESC la cierra a ella y las letras no se escriben en el nombre de atras.
+    if(enOpciones){
+        if(ActualizarOpciones()) enOpciones = false;
+
+        return Escena_configuracion;
+    }
+
+    if(botonClicado(zonaBotonOpciones())){
+        enOpciones = true;
+        PrepararOpciones();
+        return Escena_configuracion;
+    }
+
     if(IsKeyPressed(KEY_ESCAPE)) return Escena_menu;
 
     // El raton solo cuenta cuando de verdad se movio: si se leyera cada fotograma,
@@ -412,10 +431,10 @@ static void dibujarCampo(Rectangle rec, const char* texto, bool conFoco)
 
 void DibujarConfiguracion(const ConfigPartida& config)
 {
-    dibujarTextoCentrado("CONFIGURACION DE LA PARTIDA", 32, 34, COLOR_TITULO);
+    dibujarTextoCentradoSobreFondo("CONFIGURACION DE LA PARTIDA", 32, 34, COLOR_FONDO_TITULO);
 
     // ---- 1. Modo ----
-    DrawText("1.  Modo", 80, 108, 22, COLOR_TEXTO);
+    dibujarTextoSobreFondo("1.  Modo", 80, 108, 22, COLOR_FONDO_TEXTO);
     dibujarBoton(botonModo(0), "Solitario",    config.modo == Modo_solitario);
     dibujarBoton(botonModo(1), "Multijugador", config.modo == Modo_multijugador);
 
@@ -423,7 +442,7 @@ void DibujarConfiguracion(const ConfigPartida& config)
     if(enfoque == CTRL_MULTI)     dibujarAnilloEnfoque(botonModo(1));
 
     // ---- 2. Dificultad ----
-    DrawText("2.  Dificultad", 80, 226, 22, COLOR_TEXTO);
+    dibujarTextoSobreFondo("2.  Dificultad", 80, 226, 22, COLOR_FONDO_TEXTO);
 
     for(int i = 0; i < NUM_DIFICULTADES; i++){
         const InfoDificultad& nivel = DIFICULTADES[i];
@@ -438,15 +457,15 @@ void DibujarConfiguracion(const ConfigPartida& config)
         const char* cuantas  = TextFormat("%d cartas", nivel.filas * nivel.columnas);
         int         anchoSub = anchoDato(cuantas, 16);
 
-        dibujarDato(cuantas,
-                    (int)(rec.x + (rec.width - anchoSub) / 2.0f),
-                    (int)(rec.y + rec.height + 8.0f),
-                    16, COLOR_TENUE);
+        dibujarDatoSobreFondo(cuantas,
+                              (int)(rec.x + (rec.width - anchoSub) / 2.0f),
+                              (int)(rec.y + rec.height + 8.0f),
+                              16, COLOR_FONDO_TENUE);
     }
 
     // ---- 3. Jugadores ----
-    DrawText(config.modo == Modo_multijugador ? "3.  Jugadores" : "3.  Jugador",
-             80, 342, 22, COLOR_TEXTO);
+    dibujarTextoSobreFondo(config.modo == Modo_multijugador ? "3.  Jugadores" : "3.  Jugador",
+                           80, 342, 22, COLOR_FONDO_TEXTO);
 
     dibujarCampo(campoNombre(1), config.nombre1, enfoque == CTRL_NOMBRE1);
 
@@ -549,6 +568,11 @@ void DibujarConfiguracion(const ConfigPartida& config)
     // cuando el raton entra o el teclado la elige ya dice cual esta a punto de
     // activarse, y un recuadro sobre el pergamino rompia la ilusion.
 
-    dibujarTextoCentrado("Flechas para moverte     ESC para volver     ENTER para iniciar",
-                         GetScreenHeight() - 40, 18, COLOR_TENUE);
+    dibujarTextoCentradoSobreFondo("Flechas para moverte     ESC para volver     ENTER para iniciar",
+                                   GetScreenHeight() - 40, 18, COLOR_FONDO_TENUE);
+
+    dibujarBotonOpciones(zonaBotonOpciones());
+
+    // La ventana va hasta el final, encima de todo.
+    if(enOpciones) DibujarOpciones();
 }

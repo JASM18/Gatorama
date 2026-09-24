@@ -13,6 +13,7 @@
 #include "TablaPuntajes.hpp"
 #include "Dificultad.hpp"
 #include "Boton.hpp"
+#include "Opciones.hpp"
 #include "Dibujo.hpp"
 #include "Tema.hpp"
 
@@ -48,6 +49,9 @@ const int SIN_ENFOQUE    = -1;
 // que la configuracion: empieza en nada, el raton lo mueve solo cuando de verdad se
 // mueve (y lo apaga al salir de todo), y las flechas lo estrenan.
 static int enfoque = SIN_ENFOQUE;
+
+// La ventana del engrane, abierta encima de la tabla.
+static bool enOpciones = false;
 
 // La categoria que se esta viendo. La tabla NO mezcla dificultades ni modos: un
 // puntaje de Dificil siempre le ganaria a uno de Facil por el tamano del tablero
@@ -219,6 +223,7 @@ void PrepararPuntajes()
     columnaOrden     = Columna_puntos;
     descendente      = true;
     enfoque          = SIN_ENFOQUE;
+    enOpciones       = false;
 
     recalcularMejores();
 }
@@ -290,6 +295,20 @@ static void activarControl(int control)
 
 Escena_Estado ActualizarPuntajes()
 {
+    // Con la ventana de opciones abierta, ella se queda con toda la entrada: el
+    // ESC la cierra a ella, no saca de la pantalla.
+    if(enOpciones){
+        if(ActualizarOpciones()) enOpciones = false;
+
+        return Escena_puntajes;
+    }
+
+    if(botonClicado(zonaBotonOpciones())){
+        enOpciones = true;
+        PrepararOpciones();
+        return Escena_puntajes;
+    }
+
     if(IsKeyPressed(KEY_ESCAPE))    return Escena_menu;
     if(botonClicado(botonVolver())) return Escena_menu;
 
@@ -508,9 +527,15 @@ void DibujarPuntajes()
         }
     }
 
+    // Sobre el pergamino, en cafe medio: el gris de COLOR_TENUE casi no se leia.
     dibujarTextoCentrado("Clic o flechas y Enter en Puntos, Racha, Pares o Tiempo para reordenar",
-                         612, 16, COLOR_TENUE);
+                         612, 16, hayFondo ? Color{ 104, 80, 54, 255 } : COLOR_TENUE);
 
     if(hayFondo) marcarPlaca(botonVolver(), false, enfoque == CTRL_VOLVER);
     else         dibujarBoton(botonVolver(), "Volver al menu", enfoque == CTRL_VOLVER);
+
+    dibujarBotonOpciones(zonaBotonOpciones());
+
+    // La ventana va hasta el final, encima de todo.
+    if(enOpciones) DibujarOpciones();
 }

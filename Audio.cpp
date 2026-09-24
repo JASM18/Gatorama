@@ -5,6 +5,9 @@
  * \date 06/09/2026
  */
 
+#include <cstdio>
+#include <cstring>
+
 #include "raylib.h"
 
 #include "Audio.hpp"
@@ -45,8 +48,100 @@ static bool  hayVictoria = false;
 static float volumenMusica  = 0.6f;
 static float volumenEfectos = 0.8f;
 
+//***********************************************
+// ARCHIVO DE AJUSTES
+//***********************************************
+
+// El volumen elegido se guarda aqui para que sobreviva a cerrar el juego. Va junto
+// al ejecutable, como puntajes.json, y es texto plano a proposito: si algo sale
+// mal en el stand, se abre con el bloc de notas y se corrige a mano.
+//
+//     musica=0.60
+//     efectos=0.80
+//
+// Si el archivo no esta o trae basura, se usan los valores de arriba y ya: nunca
+// es motivo para que el juego no arranque.
+static const char* RUTA_AJUSTES = "settings.txt";
+
+// El volumen se guarda un rato despues del ultimo cambio y no en cada uno: una
+// barra arrastrada cambia el valor sesenta veces por segundo, y escribir el
+// archivo otras tantas no tiene sentido. Medio segundo quieto basta.
+static const float ESPERA_GUARDAR = 0.5f;
+
+static bool  hayCambioSinGuardar = false;
+static float esperaGuardar       = 0.0f;
+
+static float recortar(float v);
+
+/**
+ * \brief Busca "clave=valor" en el texto del archivo.
+ *
+ * \param texto Todo el contenido de settings.txt.
+ * \param clave Nombre del ajuste, sin el signo de igual.
+ * \param valor D&oacute;nde dejar el n&uacute;mero si se encontr&oacute;; si no, no se toca.
+ */
+static void leerAjuste(const char* texto, const char* clave, float* valor)
+{
+    const char* donde = strstr(texto, clave);
+    if(donde == 0) return;
+
+    float leido;
+
+    // El formato arma "musica=%f": sscanf solo acepta la linea si trae el igual y
+    // un numero despues. Cualquier otra cosa deja el valor como estaba.
+    char formato[32];
+    snprintf(formato, sizeof(formato), "%s=%%f", clave);
+
+    if(sscanf(donde, formato, &leido) == 1) *valor = recortar(leido);
+}
+
+/**
+ * \brief Lee el volumen de settings.txt, si existe.
+ */
+static void cargarAjustes()
+{
+    if(!FileExists(RUTA_AJUSTES)) return;
+
+    char* texto = LoadFileText(RUTA_AJUSTES);
+    if(texto == 0) return;
+
+    leerAjuste(texto, "musica",  &volumenMusica);
+    leerAjuste(texto, "efectos", &volumenEfectos);
+
+    UnloadFileText(texto);
+}
+
+/**
+ * \brief Escribe el volumen actual en settings.txt.
+ */
+static void guardarAjustes()
+{
+    const char* texto = TextFormat("# Gatorama - se escribe solo al cambiar el volumen\n"
+                                   "musica=%.2f\n"
+                                   "efectos=%.2f\n",
+                                   volumenMusica, volumenEfectos);
+
+    // SaveFileText pide un char* aunque no lo modifica.
+    SaveFileText(RUTA_AJUSTES, (char*)texto);
+
+    hayCambioSinGuardar = false;
+}
+
+/**
+ * \brief Anota que el volumen cambi&oacute;, para guardarlo en cuanto se quede quieto.
+ */
+static void avisarCambio()
+{
+    hayCambioSinGuardar = true;
+    esperaGuardar       = ESPERA_GUARDAR;
+}
+
 void IniciarAudio()
 {
+    // Primero el archivo: los volumenes leidos son los que se les ponen a la
+    // musica y a los efectos al cargarlos, aqui abajo.
+    cargarAjustes();
+
     InitAudioDevice();
 
     // Una maquina prestada puede no tener salida de sonido. No es motivo para no
@@ -106,10 +201,20 @@ void ReproducirVictoria()
 void ActualizarAudio()
 {
     if(hayMusica) UpdateMusicStream(musica);
+
+    // Se espera a que la barra se suelte y pase medio segundo sin cambios.
+    if(hayCambioSinGuardar && !IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
+        esperaGuardar -= GetFrameTime();
+
+        if(esperaGuardar <= 0.0f) guardarAjustes();
+    }
 }
 
 void CerrarAudio()
 {
+    // Si se cierra el juego justo despues de mover una barra, el cambio no se pierde.
+    if(hayCambioSinGuardar) guardarAjustes();
+
     for(int i = 0; i < numEventos; i++) UnloadSound(eventos[i]);
     numEventos = 0;
 
@@ -153,7 +258,14 @@ float VolumenMusica()
 
 void FijarVolumenMusica(float nuevo)
 {
-    volumenMusica = recortar(nuevo);
+    nuevo = recortar(nuevo);
+
+    // Las barras llaman aqui en cada fotograma aunque nadie las toque; solo un
+    // cambio de verdad cuenta para guardar.
+    if(nuevo == volumenMusica) return;
+
+    volumenMusica = nuevo;
+    avisarCambio();
 
     if(hayMusica) SetMusicVolume(musica, volumenMusica);
 }
@@ -165,7 +277,12 @@ float VolumenEfectos()
 
 void FijarVolumenEfectos(float nuevo)
 {
-    volumenEfectos = recortar(nuevo);
+    nuevo = recortar(nuevo);
+
+    if(nuevo == volumenEfectos) return;
+
+    volumenEfectos = nuevo;
+    avisarCambio();
 
     for(int i = 0; i < numEventos; i++) SetSoundVolume(eventos[i], volumenEfectos);
 

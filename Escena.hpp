@@ -23,7 +23,7 @@
  * y qu&eacute; dibujar en cada vuelta. No hay ventanas ni pantallas de verdad: solo
  * esta variable.
  *
- * La **pausa no est&aacute; en esta lista** a prop&oacute;sito. No es otra pantalla: es un modo
+ * La **pausa y las opciones no est&aacute;n en esta lista** a prop&oacute;sito. No es otra pantalla: es un modo
  * del juego, una ventana que se dibuja **encima** del tablero mientras el tablero
  * se sigue viendo. Por eso vive como una bandera dentro de la pantalla de juego y
  * no como un valor de aqu&iacute;.
@@ -32,7 +32,6 @@ enum Escena_Estado {
     Escena_menu,
     Escena_configuracion,
     Escena_puntajes,
-    Escena_opciones,
     Escena_creditos,
     Escena_juego,
     Escena_resultados,

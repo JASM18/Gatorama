@@ -49,4 +49,15 @@ const Color COLOR_BOTON_ACTIVO= { 138,  84, 196, 255 };   ///< Bot&oacute;n de l
 const Color COLOR_PANEL       = { 253, 251, 247, 255 };   ///< Fondo de las ventanas virtuales
 const Color COLOR_VELO        = {  58,  46,  74, 165 };   ///< Oscurecido detr&aacute;s de un panel
 
+// Texto escrito directo sobre el fondo de madera (fondodefault.png). Los colores de
+// arriba estan pensados para paneles claros: sobre la madera cafe, el violeta y el
+// gris casi desaparecen. Aqui van claros, y se dibujan con un contorno oscuro
+// (ver dibujarTextoSobreFondo en Dibujo.hpp) para que se lean sobre las vetas
+// claras y las oscuras por igual.
+const Color COLOR_FONDO_TITULO  = { 236, 214, 255, 255 };   ///< T&iacute;tulos sobre la madera
+const Color COLOR_FONDO_TEXTO   = { 252, 245, 230, 255 };   ///< Texto normal sobre la madera
+const Color COLOR_FONDO_TENUE   = { 224, 210, 188, 255 };   ///< Ayudas sobre la madera
+const Color COLOR_FONDO_RESALTE = { 214, 178, 255, 255 };   ///< Lo que destaca sobre la madera
+const Color COLOR_CONTORNO      = {  32,  20,  10, 255 };   ///< Borde de ese texto
+
 #endif // TEMA_HPP_INCLUDED

@@ -151,4 +151,26 @@ void dibujarDatoCentrado(const char* texto, int y, int tamano, Color color);
  */
 int anchoDato(const char* texto, int tamano);
 
+//***********************************************
+// TEXTO SOBRE EL FONDO
+//***********************************************
+// Las mismas cuatro funciones de texto, pero con un contorno oscuro alrededor de
+// cada letra. Son para lo que se escribe **directo sobre la madera** del fondo
+// -t&iacute;tulos de pantalla, marcador, l&iacute;neas de ayuda-, donde un color liso se pierde
+// entre las vetas. Sobre un panel claro se sigue usando la versi&oacute;n normal.
+//
+// Van con los colores COLOR_FONDO_* de Tema.hpp.
+
+/** \brief DrawText con contorno. Mismos par&aacute;metros que DrawText. */
+void dibujarTextoSobreFondo(const char* texto, int x, int y, int tamano, Color color);
+
+/** \brief dibujarTextoCentrado con contorno. */
+void dibujarTextoCentradoSobreFondo(const char* texto, int y, int tamano, Color color);
+
+/** \brief dibujarDato con contorno. */
+void dibujarDatoSobreFondo(const char* texto, int x, int y, int tamano, Color color);
+
+/** \brief dibujarDatoCentrado con contorno. */
+void dibujarDatoCentradoSobreFondo(const char* texto, int y, int tamano, Color color);
+
 #endif // DIBUJO_HPP_INCLUDED

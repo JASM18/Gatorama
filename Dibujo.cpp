@@ -201,3 +201,60 @@ int anchoDato(const char* texto, int tamano)
 
     return (int)MeasureTextEx(fuente, texto, (float)tamano, separacionDe(tamano)).x;
 }
+
+//***********************************************
+// TEXTO SOBRE EL FONDO
+//***********************************************
+
+/**
+ * \brief Grosor del contorno para un tama&ntilde;o de letra.
+ *
+ * Proporcional al tama&ntilde;o: con 2 px fijos un t&iacute;tulo de 40 se ve flaco y una ayuda
+ * de 16 se ve empastada.
+ */
+static int grosorContorno(int tamano)
+{
+    int grosor = tamano / 14;
+
+    return (grosor < 1) ? 1 : grosor;
+}
+
+// Las ocho direcciones alrededor de la letra. Dibujar el texto oscuro corrido a
+// cada una y el claro encima deja un borde parejo. raylib no trae contorno de texto,
+// y un shader seria mucho para esto: son nueve dibujos de un renglon.
+static const int DX[8] = { -1, 0, 1, -1, 1, -1, 0, 1 };
+static const int DY[8] = { -1, -1, -1, 0, 0, 1, 1, 1 };
+
+void dibujarTextoSobreFondo(const char* texto, int x, int y, int tamano, Color color)
+{
+    int g = grosorContorno(tamano);
+
+    for(int i = 0; i < 8; i++){
+        DrawText(texto, x + DX[i] * g, y + DY[i] * g, tamano, COLOR_CONTORNO);
+    }
+
+    DrawText(texto, x, y, tamano, color);
+}
+
+void dibujarTextoCentradoSobreFondo(const char* texto, int y, int tamano, Color color)
+{
+    dibujarTextoSobreFondo(texto, (GetScreenWidth() - MeasureText(texto, tamano)) / 2,
+                           y, tamano, color);
+}
+
+void dibujarDatoSobreFondo(const char* texto, int x, int y, int tamano, Color color)
+{
+    int g = grosorContorno(tamano);
+
+    for(int i = 0; i < 8; i++){
+        dibujarDato(texto, x + DX[i] * g, y + DY[i] * g, tamano, COLOR_CONTORNO);
+    }
+
+    dibujarDato(texto, x, y, tamano, color);
+}
+
+void dibujarDatoCentradoSobreFondo(const char* texto, int y, int tamano, Color color)
+{
+    dibujarDatoSobreFondo(texto, (GetScreenWidth() - anchoDato(texto, tamano)) / 2,
+                          y, tamano, color);
+}

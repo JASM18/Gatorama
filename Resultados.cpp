@@ -154,13 +154,13 @@ void DibujarResultados()
 {
     // ---- Titulo ----
     if(numJugadores == 1){
-        dibujarTextoCentrado("PARTIDA TERMINADA", 60, 40, COLOR_TITULO);
+        dibujarTextoCentradoSobreFondo("PARTIDA TERMINADA", 60, 40, COLOR_FONDO_TITULO);
     }
     else if(ganador >= 0){
-        dibujarDatoCentrado(TextFormat("GANO %s", nombres[ganador]), 60, 44, COLOR_BOTON_ACTIVO);
+        dibujarDatoCentradoSobreFondo(TextFormat("GANO %s", nombres[ganador]), 60, 44, COLOR_FONDO_RESALTE);
     }
     else {
-        dibujarTextoCentrado("EMPATE", 60, 44, COLOR_TITULO);
+        dibujarTextoCentradoSobreFondo("EMPATE", 60, 44, COLOR_FONDO_TITULO);
     }
 
     // ---- Panel ----

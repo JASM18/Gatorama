@@ -22,7 +22,6 @@
 #include "Pausa.hpp"
 #include "Creditos.hpp"
 #include "Puntajes.hpp"
-#include "Opciones.hpp"
 #include "Resultados.hpp"
 #include "Audio.hpp"
 
@@ -65,6 +64,7 @@ int main()
     CargarTexturasConfiguracion();
     CargarTexturasPuntajes();
     CargarTexturasPausa();
+    CargarTexturasCreditos();
     cargarFondoGeneral();
     cargarFuenteDatos();
     IniciarAudio();
@@ -139,10 +139,6 @@ int main()
                 escenaActual = ActualizarPuntajes();
             break;
 
-            case Escena_opciones:
-                escenaActual = ActualizarOpciones();
-            break;
-
             case Escena_resultados:
             {
                 Escena_Estado siguiente = ActualizarResultados();
@@ -198,10 +194,6 @@ int main()
                     DibujarPuntajes();
                 break;
 
-                case Escena_opciones:
-                    DibujarOpciones();
-                break;
-
                 case Escena_resultados:
                     DibujarResultados();
                 break;
@@ -229,6 +221,7 @@ int main()
     DescargarTexturasConfiguracion();
     DescargarTexturasPuntajes();
     DescargarTexturasPausa();
+    DescargarTexturasCreditos();
     descargarFondoGeneral();
     descargarFuenteDatos();
 
