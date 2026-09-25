@@ -156,9 +156,9 @@ struct Badge {
 
 static const int NUM_BADGES = 3;
 static const Badge BADGES[NUM_BADGES] = {
-    { iconoEstrella, "Puntos", "Suman por pareja" },
-    { iconoFuego,    "Racha",  "Seguidas dan mas" },
-    { iconoReloj,    "Tiempo", "Solo va sumando" }
+    { iconoEstrella, "Puntos", "Cada par suma puntos!" },
+    { iconoFuego,    "Racha",  "La racha da mas puntos!" },
+    { iconoReloj,    "Tiempo", "Apurale! el tiempo corre..." }
 };
 
 //***********************************************
@@ -298,7 +298,7 @@ static void dibujarModos(Rectangle panel, float y, Escala esc)
     iconoReloj((Vector2){ solo.x + E(24.0f, esc.x), solo.y + E(76.0f, esc.y) }, E(14.0f, esc.u), COLOR_TEXTO);
     DrawText("El reloj solo cuenta,", (int)(solo.x + E(46.0f, esc.x)), (int)(solo.y + E(60.0f, esc.y)), (int)E(15.0f, esc.u), COLOR_TEXTO);
     DrawText("no se detiene solo.",   (int)(solo.x + E(46.0f, esc.x)), (int)(solo.y + E(80.0f, esc.y)), (int)E(15.0f, esc.u), COLOR_TEXTO);
-    DrawText("Es para ver que tan rapido fuiste.", (int)(solo.x + E(20.0f, esc.x)), (int)(solo.y + E(100.0f, esc.y)), (int)E(13.0f, esc.u), Fade(COLOR_TEXTO, 0.8f));
+    DrawText("Descubre todos los pares en el menor tiempo!", (int)(solo.x + E(20.0f, esc.x)), (int)(solo.y + E(100.0f, esc.y)), (int)E(13.0f, esc.u), Fade(COLOR_TEXTO, 0.8f));
 
     // --- 1 vs 1 ---
     Rectangle vs = rectangulo(contentX + panelW + gap, y, panelW, panelH);
@@ -309,7 +309,7 @@ static void dibujarModos(Rectangle panel, float y, Escala esc)
 
     DrawText("Aciertas y sigues.",        (int)(vs.x + E(20.0f, esc.x)), (int)(vs.y + E(58.0f, esc.y)),  (int)E(15.0f, esc.u), COLOR_TEXTO);
     DrawText("Fallas y le toca al otro.", (int)(vs.x + E(20.0f, esc.x)), (int)(vs.y + E(78.0f, esc.y)),  (int)E(15.0f, esc.u), COLOR_TEXTO);
-    DrawText("Gana quien junte mas parejas.", (int)(vs.x + E(20.0f, esc.x)), (int)(vs.y + E(100.0f, esc.y)), (int)E(13.0f, esc.u), Fade(COLOR_TEXTO, 0.8f));
+    DrawText("Descubre todas las cartas antes que tu enemigo", (int)(vs.x + E(20.0f, esc.x)), (int)(vs.y + E(100.0f, esc.y)), (int)E(13.0f, esc.u), Fade(COLOR_TEXTO, 0.8f));
 }
 
 static void dibujarBadges(Rectangle panel, float y, Escala esc)
