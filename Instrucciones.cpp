@@ -178,6 +178,31 @@ static const float PANEL_DISENO_ALTO  = 470.0f;
 static const float PANEL_OBJETIVO_ANCHO = 960.0f;
 static const float PANEL_OBJETIVO_ALTO  = 600.0f;
 
+//***********************************************
+// ARTE DEL PANEL
+//***********************************************
+
+// El libro abierto completo: liston de "Como se juega", los cuatro pasos, el
+// letrero de como se gana, los dos modos, los puntos, la racha y la tacha. Mide
+// 960x600, lo mismo que el panel, asi que un pixel de la imagen es un pixel del
+// panel. Si falta, se dibuja el panel con iconos de abajo.
+static const char* RUTA_ARTE = "recursos/instrucciones.png";
+
+static Texture2D texturaArte;
+static bool      hayArte = false;
+
+void CargarTexturasInstrucciones()
+{
+    hayArte = cargarTexturaSiEsta(RUTA_ARTE, &texturaArte);
+}
+
+void DescargarTexturasInstrucciones()
+{
+    if(hayArte) UnloadTexture(texturaArte);
+
+    hayArte = false;
+}
+
 static Rectangle panelInstrucciones()
 {
     float anchoDisponible = GetScreenWidth()  * 0.92f;
@@ -215,6 +240,11 @@ static Escala calcularEscala(Rectangle panel)
 static Rectangle botonCerrar()
 {
     Rectangle panel  = panelInstrucciones();
+
+    // Con el arte, el cuadro de la tacha medido sobre instrucciones.png, arriba a
+    // la izquierda.
+    if(hayArte) return rectangulo(panel.x + 3.0f, panel.y + 5.0f, 78.0f, 68.0f);
+
     Escala    esc    = calcularEscala(panel);
 
     return rectangulo(panel.x + panel.width - E(60.0f, esc.x),
@@ -351,6 +381,19 @@ void DibujarInstrucciones()
     DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), COLOR_VELO);
 
     Rectangle panel = panelInstrucciones();
+
+    if(hayArte){
+        // El arte lo trae todo. Se estira al panel por si la ventana fuera mas
+        // chica que 960x600; hoy cabe justo y se dibuja pixel por pixel.
+        Rectangle origen  = { 0.0f, 0.0f, (float)texturaArte.width, (float)texturaArte.height };
+        Vector2   desfase = { 0.0f, 0.0f };
+
+        DrawTexturePro(texturaArte, origen, panel, desfase, 0.0f, WHITE);
+
+        marcarPlaca(botonCerrar(), false, ratonEncima(botonCerrar()));
+        return;
+    }
+
     Escala    esc   = calcularEscala(panel);
 
     DrawRectangleRounded(panel, 0.05f, 10, COLOR_PANEL);

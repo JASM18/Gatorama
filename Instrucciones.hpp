@@ -19,6 +19,16 @@
 #define INSTRUCCIONES_HPP_INCLUDED
 
 /**
+ * \brief Carga el arte de la ventana. **Despu&eacute;s de InitWindow()**.
+ */
+void CargarTexturasInstrucciones();
+
+/**
+ * \brief Libera el arte de la ventana. **Antes de CloseWindow()**.
+ */
+void DescargarTexturasInstrucciones();
+
+/**
  * \brief Procesa la entrada de la ventana de instrucciones.
  *
  * \return Verdadero cuando el jugador la cierra, con la tacha o con ESC.

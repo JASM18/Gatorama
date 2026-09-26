@@ -44,24 +44,43 @@ static int enfoque = SIN_ENFOQUE;
 // La ventana del engrane, abierta encima de la configuracion.
 static bool enOpciones = false;
 
+// El acomodo sigue el boceto del equipo: arriba el titulo, luego dos renglones de
+// botones centrados -los dos modos y las tres dificultades- y abajo el pergamino,
+// que ya no es solo un resumen sino el formulario: los nombres se escriben directo
+// en sus lineas y se "firma" con Iniciar, como un contrato.
+
 static Rectangle botonModo(int indice)
 {
-    return rectangulo(80.0f + indice * 250.0f, 145.0f, 230.0f, 52.0f);
+    // Dos de 200 con 30 de hueco: 430 de ancho, centrados en 1280.
+    return rectangulo(425.0f + indice * 230.0f, 108.0f, 200.0f, 50.0f);
 }
 
 static Rectangle botonDificultad(int indice)
 {
-    return rectangulo(80.0f + indice * 165.0f, 262.0f, 150.0f, 52.0f);
-}
-
-static Rectangle campoNombre(int numJugador)
-{
-    return rectangulo(80.0f, 375.0f + (numJugador - 1) * 62.0f, 330.0f, 46.0f);
+    // Tres de 170 con 25 de hueco: 560 de ancho, lo mismo que el pergamino.
+    return rectangulo(360.0f + indice * 195.0f, 170.0f, 170.0f, 50.0f);
 }
 
 static Rectangle panelResumen()
 {
-    return rectangulo(640.0f, 120.0f, 560.0f, 400.0f);
+    return rectangulo(360.0f, 258.0f, 560.0f, 400.0f);
+}
+
+/**
+ * \brief La l&iacute;nea del pergamino donde se escribe el nombre de un jugador.
+ *
+ * Es la raya que va despu&eacute;s de "Jugador 1:" o "Jugador 2:" en configResumen.png.
+ * El texto se dibuja 8 px adentro, en la misma columna que Modo y Dificultad.
+ *
+ * \param numJugador 1 o 2.
+ * \return Su rect&aacute;ngulo en pantalla.
+ */
+static Rectangle campoNombre(int numJugador)
+{
+    Rectangle panel = panelResumen();
+
+    return rectangulo(panel.x + 200.0f, panel.y + (numJugador == 1 ? 188.0f : 242.0f),
+                      210.0f, 40.0f);
 }
 
 static Rectangle botonIniciar()
@@ -339,7 +358,14 @@ Escena_Estado ActualizarConfiguracion(ConfigPartida& config)
     Vector2 movimientoRaton = GetMouseDelta();
 
     if(movimientoRaton.x != 0.0f || movimientoRaton.y != 0.0f){
-        enfoque = controlBajoElRaton(config);
+        int bajo = controlBajoElRaton(config);
+
+        // Un nombre a medio escribir no suelta el enfoque solo porque el raton se
+        // hizo a un lado para no tapar las letras: se pierde hasta que el raton
+        // pase por otro control, o con las flechas.
+        bool escribiendo = (enfoque == CTRL_NOMBRE1 || enfoque == CTRL_NOMBRE2);
+
+        if(bajo != SIN_ENFOQUE || !escribiendo) enfoque = bajo;
     }
 
     moverEnfoqueConfiguracion(config);
@@ -397,35 +423,40 @@ Escena_Estado ActualizarConfiguracion(ConfigPartida& config)
 //***********************************************
 
 /**
- * \brief Dibuja un campo de texto con su contenido y, si toca, el cursor.
+ * \brief Dibuja un nombre sobre su l&iacute;nea del pergamino, editable.
  *
- * \param rec       D&oacute;nde va.
- * \param texto     Contenido actual.
- * \param conFoco   Verdadero si es el campo donde se est&aacute; escribiendo.
+ * Con el enfoque, un velo claro marca la l&iacute;nea donde se est&aacute; escribiendo y
+ * parpadea el cursor; mientras se edita se ve lo que va tecleado tal cual, aunque
+ * est&eacute; vac&iacute;o. Sin enfoque se ve el nombre que va a quedar -si el campo est&aacute;
+ * vac&iacute;o, el de por omisi&oacute;n-.
+ *
+ * \param rec      La l&iacute;nea (campoNombre).
+ * \param tecleado Lo que el jugador lleva escrito.
+ * \param final    El nombre que se usar&aacute; si se inicia ahora.
+ * \param conFoco  Si es donde se est&aacute; escribiendo.
  */
-static void dibujarCampo(Rectangle rec, const char* texto, bool conFoco)
+static void dibujarLineaNombre(Rectangle rec, const char* tecleado, const char* final, bool conFoco)
 {
-    DrawRectangleRounded(rec, 0.2f, 8, COLOR_BOTON);
-    DrawRectangleRoundedLinesEx(rec, 0.2f, 8, conFoco ? 3.0f : 1.0f,
-                                conFoco ? COLOR_SELECCION : COLOR_TENUE);
+    const int TAMANO = 22;
+    int x = (int)rec.x + 8;
+    int y = (int)rec.y + 10;
 
-    const int TAMANO = 24;
-    int x = (int)rec.x + 14;
-    int y = (int)(rec.y + (rec.height - TAMANO) / 2.0f);
+    if(!conFoco){
+        dibujarDato(final, x, y, TAMANO, COLOR_TEXTO);
+        return;
+    }
 
-    dibujarDato(texto, x, y, TAMANO, COLOR_TEXTO);
+    DrawRectangleRounded(rec, 0.4f, 8, Fade(WHITE, 0.45f));
 
-    if(conFoco){
-        // El cursor prende y apaga cada medio segundo. GetTime da los segundos
-        // desde que abrio el juego; el residuo entre 1 parte ese segundo en dos
-        // mitades, y en una se dibuja y en la otra no.
-        bool visible = (GetTime() - (int)GetTime()) < 0.5;
+    dibujarDato(tecleado, x, y, TAMANO, COLOR_TEXTO);
 
-        if(visible){
-            int desplazado = x + anchoDato(texto, TAMANO) + 2;
+    // El cursor prende y apaga cada medio segundo. GetTime da los segundos desde
+    // que abrio el juego; el residuo entre 1 parte ese segundo en dos mitades, y en
+    // una se dibuja y en la otra no.
+    bool visible = (GetTime() - (int)GetTime()) < 0.5;
 
-            DrawRectangle(desplazado, y, 2, TAMANO, COLOR_SELECCION);
-        }
+    if(visible){
+        DrawRectangle(x + anchoDato(tecleado, TAMANO) + 2, y, 2, TAMANO, COLOR_SELECCION);
     }
 }
 
@@ -433,17 +464,14 @@ void DibujarConfiguracion(const ConfigPartida& config)
 {
     dibujarTextoCentradoSobreFondo("CONFIGURACION DE LA PARTIDA", 32, 34, COLOR_FONDO_TITULO);
 
-    // ---- 1. Modo ----
-    dibujarTextoSobreFondo("1.  Modo", 80, 108, 22, COLOR_FONDO_TEXTO);
+    // ---- Modo ----
     dibujarBoton(botonModo(0), "Solitario",    config.modo == Modo_solitario);
     dibujarBoton(botonModo(1), "Multijugador", config.modo == Modo_multijugador);
 
     if(enfoque == CTRL_SOLITARIO) dibujarAnilloEnfoque(botonModo(0));
     if(enfoque == CTRL_MULTI)     dibujarAnilloEnfoque(botonModo(1));
 
-    // ---- 2. Dificultad ----
-    dibujarTextoSobreFondo("2.  Dificultad", 80, 226, 22, COLOR_FONDO_TEXTO);
-
+    // ---- Dificultad ----
     for(int i = 0; i < NUM_DIFICULTADES; i++){
         const InfoDificultad& nivel = DIFICULTADES[i];
         Rectangle             rec   = botonDificultad(i);
@@ -459,26 +487,27 @@ void DibujarConfiguracion(const ConfigPartida& config)
 
         dibujarDatoSobreFondo(cuantas,
                               (int)(rec.x + (rec.width - anchoSub) / 2.0f),
-                              (int)(rec.y + rec.height + 8.0f),
+                              (int)(rec.y + rec.height + 6.0f),
                               16, COLOR_FONDO_TENUE);
     }
 
-    // ---- 3. Jugadores ----
-    dibujarTextoSobreFondo(config.modo == Modo_multijugador ? "3.  Jugadores" : "3.  Jugador",
-                           80, 342, 22, COLOR_FONDO_TEXTO);
-
-    dibujarCampo(campoNombre(1), config.nombre1, enfoque == CTRL_NOMBRE1);
-
-    if(config.modo == Modo_multijugador){
-        dibujarCampo(campoNombre(2), config.nombre2, enfoque == CTRL_NOMBRE2);
-    }
-
-    // ---- Resumen ----
+    // ---- Pergamino: el formulario ----
     Rectangle panel = panelResumen();
 
     const InfoDificultad& nivel = DIFICULTADES[config.dificultad];
 
     const char* modoTexto = config.modo == Modo_solitario ? "Solitario" : "Multijugador";
+
+    // Los cuatro renglones, medidos sobre configResumen.png: donde empieza el
+    // valor y la altura de cada linea. Sin la lamina se usan los mismos, para que
+    // los campos de nombre no cambien de lugar si falta el arte.
+    const int XV     = (int)panel.x + 208;
+    const int XR     = (int)panel.x + 36;
+    const int Y_MODO = (int)panel.y + 88;
+    const int Y_DIF  = (int)panel.y + 141;
+    const int Y_J1   = (int)panel.y + 198;
+    const int Y_J2   = (int)panel.y + 252;
+    const int TAMANO = 22;
 
     if(hayResumen){
 
@@ -488,61 +517,33 @@ void DibujarConfiguracion(const ConfigPartida& config)
 
         DrawTexturePro(texturaResumen, origen, panel, desfase, 0.0f, WHITE);
 
-        // La lamina ya trae el titulo y los rotulos: aqui solo van los valores,
-        // sobre las lineas. Los desfases salieron de medir configResumen.png, que
-        // se dibuja calcado sobre panel (560x400), asi que un pixel de la imagen
-        // es un pixel de la pantalla. La dificultad se acorta a "nombre  FxC"
-        // porque en la version larga -"(N pares)"- no cabe en la linea.
-        const int XV     = (int)panel.x + 208;
-        const int TAMANO = 22;
-
-        dibujarDato(modoTexto, XV, (int)panel.y + 88,  TAMANO, COLOR_TEXTO);
-
-        dibujarDato(TextFormat("%s   %dx%d", nivel.nombre, nivel.filas, nivel.columnas),
-                    XV, (int)panel.y + 141, TAMANO, COLOR_TEXTO);
-
-        dibujarDato(nombreDeJugador(config, 1), XV, (int)panel.y + 198, TAMANO, COLOR_TEXTO);
-
-        // "Jugador 2:" esta impreso en la lamina siempre; en solitario su linea
-        // se queda vacia.
-        if(config.modo == Modo_multijugador){
-            dibujarDato(nombreDeJugador(config, 2), XV, (int)panel.y + 252, TAMANO, COLOR_TEXTO);
-        }
-
     } else {
 
-        // Sin lamina se dibuja el panel de texto de siempre -titulo, rotulos en
-        // una columna y valores en otra-, para poder seguir trabajando en la
-        // pantalla aunque el arte no este.
+        // Sin lamina, el mismo pergamino hecho con figuras y rotulos.
         DrawRectangleRounded(panel, 0.06f, 10, COLOR_PANEL);
         DrawRectangleRoundedLinesEx(panel, 0.06f, 10, 2.0f, COLOR_TENUE);
 
-        int x = (int)panel.x + 36;
-        int y = (int)panel.y + 40;
+        DrawText("Configuracion", XR, (int)panel.y + 30, 28, COLOR_TITULO);
+        DrawText("Modo:",         XR, Y_MODO, TAMANO, COLOR_TENUE);
+        DrawText("Dificultad:",   XR, Y_DIF,  TAMANO, COLOR_TENUE);
+        DrawText("Jugador 1:",    XR, Y_J1,   TAMANO, COLOR_TENUE);
+        DrawText("Jugador 2:",    XR, Y_J2,   TAMANO, COLOR_TENUE);
+    }
 
-        DrawText("Asi va a quedar", x, y, 24, COLOR_TITULO);
+    // Modo y dificultad solo se leen: se cambian con los botones de arriba. La
+    // dificultad va corta -"nombre  FxC"- porque la version larga no cabe en la linea.
+    dibujarDato(modoTexto, XV, Y_MODO, TAMANO, COLOR_TEXTO);
+    dibujarDato(TextFormat("%s   %dx%d", nivel.nombre, nivel.filas, nivel.columnas),
+                XV, Y_DIF, TAMANO, COLOR_TEXTO);
 
-        // El rotulo fijo va con la fuente de fabrica y el valor con la del juego.
-        // Se dibujan en dos columnas y no en una sola cadena con espacios: en una
-        // fuente donde cada letra mide distinto, alinear con espacios no alinea nada.
-        const int X_VALOR = x + 150;
+    // Los nombres si se escriben aqui mismo, sobre su linea.
+    dibujarLineaNombre(campoNombre(1), config.nombre1, nombreDeJugador(config, 1),
+                       enfoque == CTRL_NOMBRE1);
 
-        DrawText("Modo:", x, y + 60, 22, COLOR_TENUE);
-        dibujarDato(modoTexto, X_VALOR, y + 60, 22, COLOR_TEXTO);
-
-        DrawText("Dificultad:", x, y + 96, 22, COLOR_TENUE);
-        dibujarDato(TextFormat("%s   %dx%d   (%d pares)",
-                               nivel.nombre, nivel.filas, nivel.columnas,
-                               (nivel.filas * nivel.columnas) / 2),
-                    X_VALOR, y + 96, 22, COLOR_TEXTO);
-
-        DrawText("Jugador:", x, y + 132, 22, COLOR_TENUE);
-        dibujarDato(nombreDeJugador(config, 1), X_VALOR, y + 132, 22, COLOR_TEXTO);
-
-        if(config.modo == Modo_multijugador){
-            DrawText("Jugador:", x, y + 168, 22, COLOR_TENUE);
-            dibujarDato(nombreDeJugador(config, 2), X_VALOR, y + 168, 22, COLOR_TEXTO);
-        }
+    // "Jugador 2:" esta impreso siempre; en solitario su linea se queda vacia.
+    if(config.modo == Modo_multijugador){
+        dibujarLineaNombre(campoNombre(2), config.nombre2, nombreDeJugador(config, 2),
+                           enfoque == CTRL_NOMBRE2);
     }
 
     // ---- Boton Iniciar ----
@@ -568,7 +569,7 @@ void DibujarConfiguracion(const ConfigPartida& config)
     // cuando el raton entra o el teclado la elige ya dice cual esta a punto de
     // activarse, y un recuadro sobre el pergamino rompia la ilusion.
 
-    dibujarTextoCentradoSobreFondo("Flechas para moverte     ESC para volver     ENTER para iniciar",
+    dibujarTextoCentradoSobreFondo("Clic en tu nombre para escribirlo     ESC para volver     ENTER para iniciar",
                                    GetScreenHeight() - 40, 18, COLOR_FONDO_TENUE);
 
     dibujarBotonOpciones(zonaBotonOpciones());

@@ -24,6 +24,9 @@
 #include "Puntajes.hpp"
 #include "Resultados.hpp"
 #include "Audio.hpp"
+#include "Instrucciones.hpp"
+#include "Boton.hpp"
+#include "Opciones.hpp"
 
 // ***********************************************
 // CONFIGURACION DE LA VENTANA
@@ -65,6 +68,9 @@ int main()
     CargarTexturasPuntajes();
     CargarTexturasPausa();
     CargarTexturasCreditos();
+    CargarTexturasOpciones();
+    cargarTexturasBotones();
+    CargarTexturasInstrucciones();
     cargarFondoGeneral();
     cargarFuenteDatos();
     IniciarAudio();
@@ -222,6 +228,9 @@ int main()
     DescargarTexturasPuntajes();
     DescargarTexturasPausa();
     DescargarTexturasCreditos();
+    DescargarTexturasOpciones();
+    descargarTexturasBotones();
+    DescargarTexturasInstrucciones();
     descargarFondoGeneral();
     descargarFuenteDatos();
 

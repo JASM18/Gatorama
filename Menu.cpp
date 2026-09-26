@@ -52,7 +52,14 @@ const int OPCION_INSTRUCCIONES = 2;
 // Menu.cpp: ningun otro archivo la puede ver ni modificar. Eso es lo que hace que
 // esto sea un modulo y no una variable global suelta. main.cpp no sabe -ni tiene
 // por que saber- cual opcion esta resaltada.
-static int opcionSeleccionada = 0;
+//
+// Mismo modelo que el cursor de cartas del tablero: arranca en nada (-1), las
+// flechas lo estrenan, y el raton lo mueve solo cuando de verdad se mueve. Antes
+// arrancaba en "Jugar" y el raton nunca lo soltaba, asi que siempre habia un
+// renglon encendido aunque nadie estuviera apuntando.
+const int SIN_OPCION = -1;
+
+static int opcionSeleccionada = SIN_OPCION;
 
 // Si la ventana de instrucciones esta abierta encima del menu. Es una bandera y no
 // una escena por lo mismo que la pausa: el menu se sigue viendo debajo.
@@ -181,27 +188,43 @@ Escena_Estado ActualizarMenu()
         return Escena_menu;
     }
 
+    // El raton solo cuenta cuando de verdad se movio: si se leyera cada fotograma,
+    // pisaria al instante lo que se acaba de elegir con las flechas. Al salir de
+    // todos los renglones, no queda ninguno encendido.
+    Vector2 movimientoRaton = GetMouseDelta();
+
+    if(movimientoRaton.x != 0.0f || movimientoRaton.y != 0.0f){
+        opcionSeleccionada = SIN_OPCION;
+
+        for(int i = 0; i < NUM_OPCIONES; i++){
+            if(ratonEncima(zonaOpcion(i))) opcionSeleccionada = i;
+        }
+    }
+
     // IsKeyPressed es verdadero SOLO en el fotograma exacto en que la tecla baja.
-    // Con IsKeyDown recorreriamos las 4 opciones antes de soltar la tecla, porque
+    // Con IsKeyDown recorreriamos las opciones antes de soltar la tecla, porque
     // el bucle da 60 vueltas por segundo y un toque normal dura varias.
-    if(IsKeyPressed(KEY_DOWN)) opcionSeleccionada++;
-    if(IsKeyPressed(KEY_UP))   opcionSeleccionada--;
+    bool abajo  = IsKeyPressed(KEY_DOWN);
+    bool arriba = IsKeyPressed(KEY_UP);
 
-    // Menu circular: de la ultima opcion se pasa a la primera y al reves.
-    // Se suma NUM_OPCIONES antes del modulo porque en C++ el residuo de un
-    // negativo es negativo: -1 % 4 da -1, no 3. Sumar primero lo evita.
-    opcionSeleccionada = (opcionSeleccionada + NUM_OPCIONES) % NUM_OPCIONES;
+    if(opcionSeleccionada == SIN_OPCION){
+        // La primera flecha estrena el cursor: hacia abajo en "Jugar", hacia
+        // arriba en "Salir".
+        if(abajo)  opcionSeleccionada = 0;
+        if(arriba) opcionSeleccionada = NUM_OPCIONES - 1;
+    } else {
+        if(abajo)  opcionSeleccionada++;
+        if(arriba) opcionSeleccionada--;
 
-    // El raton manda sobre las flechas: si el puntero esta encima de una opcion,
-    // esa es la resaltada. Sin esta linea las dos formas de navegar se
-    // contradirian en pantalla -una cosa resaltada y otra bajo el cursor-.
-    for(int i = 0; i < NUM_OPCIONES; i++){
-        if(ratonEncima(zonaOpcion(i))) opcionSeleccionada = i;
+        // Menu circular: de la ultima opcion se pasa a la primera y al reves.
+        // Se suma NUM_OPCIONES antes del modulo porque en C++ el residuo de un
+        // negativo es negativo: -1 % 5 da -1, no 4. Sumar primero lo evita.
+        opcionSeleccionada = (opcionSeleccionada + NUM_OPCIONES) % NUM_OPCIONES;
     }
 
     int elegida = -1;
 
-    if(IsKeyPressed(KEY_ENTER)) elegida = opcionSeleccionada;
+    if(IsKeyPressed(KEY_ENTER) && opcionSeleccionada != SIN_OPCION) elegida = opcionSeleccionada;
 
     for(int i = 0; i < NUM_OPCIONES; i++){
         if(botonClicado(zonaOpcion(i))) elegida = i;
@@ -212,7 +235,11 @@ Escena_Estado ActualizarMenu()
         return Escena_menu;
     }
 
-    if(elegida >= 0) return DESTINOS[elegida];
+    if(elegida >= 0){
+        // Se apaga al irse, para que al volver al menu no haya nada encendido.
+        opcionSeleccionada = SIN_OPCION;
+        return DESTINOS[elegida];
+    }
 
     // Nadie ha elegido nada: nos quedamos donde estamos.
     return Escena_menu;
@@ -273,7 +300,7 @@ void DibujarMenu()
 
         if(hayPlacas) DrawTexture(texturaPlacas, 0, 0, WHITE);
 
-        if(hayActiva){
+        if(hayActiva && opcionSeleccionada != SIN_OPCION){
             Rectangle zona    = zonaOpcion(opcionSeleccionada);
             Rectangle origen  = { 0.0f, 0.0f,
                                   (float)texturaActiva.width, (float)texturaActiva.height };

@@ -33,6 +33,11 @@ static const char* DESARROLLADORES[NUM_DESARROLLADORES] = {
 // La ventana del engrane, abierta encima de los creditos.
 static bool enOpciones = false;
 
+// Si "Volver al menu" esta resaltado. Es el unico boton, asi que el enfoque es un
+// si o un no. Mismo modelo que las demas pantallas: arranca apagado, cualquier
+// flecha lo prende, y el raton lo prende o lo apaga solo cuando de verdad se mueve.
+static bool volverEnfocado = false;
+
 //***********************************************
 // ARTE DE LA PANTALLA
 //***********************************************
@@ -86,10 +91,25 @@ Escena_Estado ActualizarCreditos()
         return Escena_creditos;
     }
 
-    // Enter tambien regresa: es el unico boton de la pantalla.
-    if(IsKeyPressed(KEY_ESCAPE))     return Escena_menu;
-    if(enfoqueActivado())            return Escena_menu;
-    if(botonClicado(botonVolver()))  return Escena_menu;
+    Vector2 movimientoRaton = GetMouseDelta();
+
+    if(movimientoRaton.x != 0.0f || movimientoRaton.y != 0.0f){
+        volverEnfocado = ratonEncima(botonVolver());
+    }
+
+    if(IsKeyPressed(KEY_UP)   || IsKeyPressed(KEY_DOWN) ||
+       IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_RIGHT)){
+        volverEnfocado = true;
+    }
+
+    // Enter tambien regresa: es el unico boton de la pantalla. Se apaga el
+    // resaltado al salir, para que la siguiente visita llegue sin nada marcado.
+    bool salir = IsKeyPressed(KEY_ESCAPE) || enfoqueActivado() || botonClicado(botonVolver());
+
+    if(salir){
+        volverEnfocado = false;
+        return Escena_menu;
+    }
 
     return Escena_creditos;
 }
@@ -99,7 +119,7 @@ void DibujarCreditos()
     if(hayFondo){
         DrawTexture(texturaFondo, 0, 0, WHITE);
 
-        marcarPlaca(botonVolver(), false, ratonEncima(botonVolver()));
+        marcarPlaca(botonVolver(), false, volverEnfocado);
 
         dibujarBotonOpciones(zonaBotonOpciones());
 
@@ -130,6 +150,8 @@ void DibujarCreditos()
                                    540, 18, COLOR_FONDO_TENUE);
 
     dibujarBoton(botonVolver(), "Volver al menu", false);
+
+    if(volverEnfocado) dibujarAnilloEnfoque(botonVolver());
 
     dibujarBotonOpciones(zonaBotonOpciones());
 

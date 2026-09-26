@@ -19,6 +19,16 @@
 #define OPCIONES_HPP_INCLUDED
 
 /**
+ * \brief Carga el arte de la ventana. **Despu&eacute;s de InitWindow()**.
+ */
+void CargarTexturasOpciones();
+
+/**
+ * \brief Libera el arte de la ventana. **Antes de CloseWindow()**.
+ */
+void DescargarTexturasOpciones();
+
+/**
  * \brief Deja la ventana lista para abrirse, sin nada resaltado.
  */
 void PrepararOpciones();

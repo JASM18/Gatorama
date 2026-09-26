@@ -35,9 +35,36 @@ const int SIN_ENFOQUE   = -1;
 // cuando de verdad se mueve, y las flechas lo estrenan.
 static int enfoque = SIN_ENFOQUE;
 
-// Mismo ancho que la pausa y la mitad de alto: es la pausa con menos cosas.
+// Mismo ancho que la pausa y menos alto: es la pausa con menos cosas.
 static const float PANEL_ANCHO = 440.0f;
 static const float PANEL_ALTO  = 300.0f;
+
+//***********************************************
+// ARTE DEL PANEL
+//***********************************************
+
+// El panel completo: marco, sol con "OPCIONES", la tacha, los rotulos de Musica y
+// Sonido y la placa de Regresar. Mide 440x300, igual que el panel, asi que un
+// pixel de la imagen es un pixel del panel y las zonas se midieron sobre el PNG.
+static const char* RUTA_PANEL = "recursos/opciones.png";
+
+static Texture2D texturaPanel;
+static bool      hayPanel = false;
+
+void CargarTexturasOpciones()
+{
+    hayPanel = cargarTexturaSiEsta(RUTA_PANEL, &texturaPanel);
+}
+
+void DescargarTexturasOpciones()
+{
+    if(hayPanel) UnloadTexture(texturaPanel);
+
+    hayPanel = false;
+}
+
+// Tinta cafe oscura, la del arte, para los porcentajes.
+static const Color COLOR_TINTA = { 62, 46, 30, 255 };
 
 static Rectangle panelOpciones()
 {
@@ -49,6 +76,9 @@ static Rectangle panelOpciones()
 static Rectangle botonCerrar()
 {
     Rectangle panel = panelOpciones();
+
+    // Con el arte, el cuadrito de la tacha medido sobre opciones.png.
+    if(hayPanel) return rectangulo(panel.x + 18.0f, panel.y + 13.0f, 44.0f, 48.0f);
 
     return rectangulo(panel.x + 18.0f, panel.y + 18.0f, 42.0f, 42.0f);
 }
@@ -62,12 +92,17 @@ static Rectangle barraVolumen(int cual)
 {
     Rectangle panel = panelOpciones();
 
-    return rectangulo(panel.x + 150.0f, panel.y + 112.0f + cual * 56.0f, 195.0f, 16.0f);
+    // A la derecha de los rotulos del arte: "Musica" tiene su centro en y = 119 y
+    // "Sonido" en y = 175. Sin arte, las mismas medidas quedan bien igual.
+    return rectangulo(panel.x + 150.0f, panel.y + 111.0f + cual * 56.0f, 195.0f, 16.0f);
 }
 
 static Rectangle botonRegresar()
 {
     Rectangle panel = panelOpciones();
+
+    // Con el arte, la placa medida sobre opciones.png por su contorno.
+    if(hayPanel) return rectangulo(panel.x + 73.0f, panel.y + 213.0f, 297.0f, 58.0f);
 
     return rectangulo(panel.x + 70.0f, panel.y + 214.0f, panel.width - 140.0f, 50.0f);
 }
@@ -168,35 +203,56 @@ void DibujarOpciones()
 
     Rectangle panel = panelOpciones();
 
-    DrawRectangleRounded(panel, 0.08f, 10, COLOR_PANEL);
-    DrawRectangleRoundedLinesEx(panel, 0.08f, 10, 2.0f, COLOR_SELECCION);
+    if(hayPanel){
+        // El arte trae el titulo, los rotulos, la tacha y la placa de Regresar.
+        DrawTexture(texturaPanel, (int)panel.x, (int)panel.y, WHITE);
 
-    dibujarBoton(botonCerrar(), "X", false);
+        marcarPlaca(botonCerrar(), false, ratonEncima(botonCerrar()));
+    } else {
+        DrawRectangleRounded(panel, 0.08f, 10, COLOR_PANEL);
+        DrawRectangleRoundedLinesEx(panel, 0.08f, 10, 2.0f, COLOR_SELECCION);
 
-    const char* titulo = "OPCIONES";
-    int tamano = 36;
-    int ancho  = MeasureText(titulo, tamano);
+        dibujarBoton(botonCerrar(), "X", false);
 
-    DrawText(titulo, (int)(panel.x + (panel.width - ancho) / 2.0f), (int)(panel.y + 28.0f),
-             tamano, COLOR_TITULO);
+        const char* titulo = "OPCIONES";
+        int tamano = 36;
+        int ancho  = MeasureText(titulo, tamano);
+
+        DrawText(titulo, (int)(panel.x + (panel.width - ancho) / 2.0f), (int)(panel.y + 28.0f),
+                 tamano, COLOR_TITULO);
+    }
 
     // ---- Volumen: musica y efectos ----
     for(int i = 0; i < NUM_SONIDOS; i++){
 
         Rectangle barra = barraVolumen(i);
 
-        DrawText(NOMBRES_SONIDO[i], (int)panel.x + 40, (int)(barra.y - 2.0f), 20, COLOR_TEXTO);
+        if(!hayPanel){
+            DrawText(NOMBRES_SONIDO[i], (int)panel.x + 40, (int)(barra.y - 2.0f), 20, COLOR_TEXTO);
+        }
+
+        // Con enfoque, un velo claro detras de la barra en vez de un anillo: sobre
+        // el pergamino, un recuadro de color se ve pegado encima. Igual que la pausa.
+        if(enfoque == i){
+            Rectangle velo = { barra.x - 10.0f, barra.y - 12.0f, barra.width + 70.0f, barra.height + 24.0f };
+
+            if(hayPanel) DrawRectangleRounded(velo, 0.5f, 8, Fade(WHITE, 0.35f));
+            else         dibujarAnilloEnfoque(barra);
+        }
 
         dibujarDeslizador(barra, volumenDe(i));
 
-        if(enfoque == i) dibujarAnilloEnfoque(barra);
-
         dibujarDato(TextFormat("%d%%", (int)(volumenDe(i) * 100.0f + 0.5f)),
                     (int)(barra.x + barra.width + 18.0f), (int)(barra.y - 4.0f),
-                    20, COLOR_TENUE);
+                    20, hayPanel ? COLOR_TINTA : COLOR_TENUE);
     }
 
-    dibujarBoton(botonRegresar(), "Regresar", false);
+    // ---- Regresar ----
+    if(hayPanel){
+        marcarPlaca(botonRegresar(), false, enfoque == CTRL_REGRESAR);
+    } else {
+        dibujarBoton(botonRegresar(), "Regresar", false);
 
-    if(enfoque == CTRL_REGRESAR) dibujarAnilloEnfoque(botonRegresar());
+        if(enfoque == CTRL_REGRESAR) dibujarAnilloEnfoque(botonRegresar());
+    }
 }

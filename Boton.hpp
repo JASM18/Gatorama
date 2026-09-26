@@ -126,6 +126,26 @@ void dibujarAnilloEnfoque(Rectangle rec);
 void marcarPlaca(Rectangle rec, bool elegida, bool conEnfoque);
 
 /**
+ * \brief Carga el arte de los botones fijos (engrane y pausa). **Despu&eacute;s de
+ *        InitWindow()**.
+ */
+void cargarTexturasBotones();
+
+/**
+ * \brief Libera el arte de los botones fijos. **Antes de CloseWindow()**.
+ */
+void descargarTexturasBotones();
+
+/**
+ * \brief Dibuja el bot&oacute;n de pausa del tablero.
+ *
+ * Con arte, la imagen de botonPausa.png; sin ella, un bot&oacute;n normal que dice Pausa.
+ *
+ * \param rec D&oacute;nde va.
+ */
+void dibujarBotonPausa(Rectangle rec);
+
+/**
  * \brief D&oacute;nde va el bot&oacute;n de opciones: arriba a la derecha, igual en todas las
  *        pantallas. Vive aqu&iacute; para que no pueda quedar en un lugar distinto en cada una.
  * \return Su rect&aacute;ngulo en pantalla.

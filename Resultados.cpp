@@ -25,11 +25,14 @@ static int        puntos[MAX_JUGADORES];
 static int        rachas[MAX_JUGADORES];
 static float      tiempos[MAX_JUGADORES];
 
-// Dos botones. El enfoque arranca en "Jugar otra vez" porque es lo que casi
-// siempre quiere el que acaba de jugar.
+// Dos botones: 0 es "Jugar otra vez" y 1 es "Volver al menu". Mismo modelo que las
+// demas pantallas: arranca sin nada resaltado, las flechas lo estrenan y el raton
+// lo mueve solo cuando de verdad se mueve. La primera flecha cae en "Jugar otra
+// vez", que es lo que casi siempre quiere el que acaba de jugar.
 const int NUM_CONTROLES = 2;
+const int SIN_ENFOQUE   = -1;
 
-static int enfoque = 0;
+static int enfoque = SIN_ENFOQUE;
 
 static int        numJugadores = 1;
 static int        ganador      = 0;
@@ -39,7 +42,7 @@ static Dificultad dificultad   = Dificultad_facil;
 
 void PrepararResultados(const ConfigPartida& config, const Partida& partida)
 {
-    enfoque = 0;
+    enfoque = SIN_ENFOQUE;
 
     numJugadores = partida.NumJugadores();
     ganador      = partida.Ganador();
@@ -88,17 +91,30 @@ static Rectangle botonAlMenu()
 
 Escena_Estado ActualizarResultados()
 {
-    if(ratonEncima(botonOtraVez())) enfoque = 0;
-    if(ratonEncima(botonAlMenu()))  enfoque = 1;
+    Vector2 movimientoRaton = GetMouseDelta();
 
-    enfoque = moverEnfoque(enfoque, NUM_CONTROLES, true);
+    if(movimientoRaton.x != 0.0f || movimientoRaton.y != 0.0f){
+        enfoque = SIN_ENFOQUE;
+
+        if(ratonEncima(botonOtraVez())) enfoque = 0;
+        if(ratonEncima(botonAlMenu()))  enfoque = 1;
+    }
+
+    if(enfoque == SIN_ENFOQUE){
+        if(IsKeyPressed(KEY_UP)   || IsKeyPressed(KEY_DOWN) ||
+           IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_RIGHT)){
+            enfoque = 0;
+        }
+    } else {
+        enfoque = moverEnfoque(enfoque, NUM_CONTROLES, true);
+    }
 
     if(botonClicado(botonOtraVez())) return Escena_configuracion;
 
     if(IsKeyPressed(KEY_ESCAPE))    return Escena_menu;
     if(botonClicado(botonAlMenu())) return Escena_menu;
 
-    if(enfoqueActivado()){
+    if(enfoqueActivado() && enfoque != SIN_ENFOQUE){
         return (enfoque == 0) ? Escena_configuracion : Escena_menu;
     }
 
@@ -187,8 +203,11 @@ void DibujarResultados()
                  (int)panel.x + 40, (int)(panel.y + panel.height - 46.0f), 16, COLOR_TENUE);
     }
 
-    dibujarBoton(botonOtraVez(), "Jugar otra vez", true);
+    // Ninguno va pintado como elegido: son acciones, no opciones. Antes "Jugar
+    // otra vez" salia siempre morado y parecia que ya estaba seleccionado.
+    dibujarBoton(botonOtraVez(), "Jugar otra vez", false);
     dibujarBoton(botonAlMenu(),  "Volver al menu", false);
 
-    dibujarAnilloEnfoque((enfoque == 0) ? botonOtraVez() : botonAlMenu());
+    if(enfoque == 0) dibujarAnilloEnfoque(botonOtraVez());
+    if(enfoque == 1) dibujarAnilloEnfoque(botonAlMenu());
 }

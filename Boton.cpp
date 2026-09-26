@@ -9,6 +9,7 @@
 
 #include "Boton.hpp"
 #include "Tema.hpp"
+#include "Dibujo.hpp"
 
 Rectangle rectangulo(float x, float y, float ancho, float alto)
 {
@@ -178,6 +179,71 @@ void marcarPlaca(Rectangle rec, bool elegida, bool conEnfoque)
 // BOTON DE OPCIONES
 //***********************************************
 
+//***********************************************
+// ARTE DE LOS BOTONES FIJOS
+//***********************************************
+
+// Los dos botones que estan en varias pantallas: el engrane de opciones y el de
+// pausa del tablero. Viven aqui y no en cada pantalla porque son el mismo boton
+// en todas; cargarlos una sola vez tambien evita tener cinco copias en memoria.
+static const char* RUTA_OPCIONES = "recursos/botonOpciones.png";
+static const char* RUTA_PAUSA    = "recursos/botonPausa.png";
+
+static Texture2D texturaOpciones;
+static Texture2D texturaPausa;
+
+static bool hayOpciones = false;
+static bool hayPausa    = false;
+
+void cargarTexturasBotones()
+{
+    hayOpciones = cargarTexturaSiEsta(RUTA_OPCIONES, &texturaOpciones);
+    hayPausa    = cargarTexturaSiEsta(RUTA_PAUSA,    &texturaPausa);
+
+    // Las dos vienen mas grandes de lo que se dibujan -el engrane de 300 px a 40,
+    // la pausa al doble-: sin mipmaps, reducirlas se ve dentado. Es el mismo
+    // arreglo que tienen las cartas.
+    if(hayOpciones){
+        GenTextureMipmaps(&texturaOpciones);
+        SetTextureFilter(texturaOpciones, TEXTURE_FILTER_TRILINEAR);
+    }
+
+    if(hayPausa){
+        GenTextureMipmaps(&texturaPausa);
+        SetTextureFilter(texturaPausa, TEXTURE_FILTER_TRILINEAR);
+    }
+}
+
+void descargarTexturasBotones()
+{
+    if(hayOpciones) UnloadTexture(texturaOpciones);
+    if(hayPausa)    UnloadTexture(texturaPausa);
+
+    hayOpciones = false;
+    hayPausa    = false;
+}
+
+/**
+ * \brief Dibuja una imagen ocupando todo el bot&oacute;n, aclarada si el rat&oacute;n est&aacute; encima.
+ */
+static void dibujarImagenBoton(Texture2D tex, Rectangle rec)
+{
+    Rectangle origen  = { 0.0f, 0.0f, (float)tex.width, (float)tex.height };
+    Vector2   desfase = { 0.0f, 0.0f };
+
+    DrawTexturePro(tex, origen, rec, desfase, 0.0f, WHITE);
+
+    // La imagen es cuadrada y opaca, asi que el velo va recto, sin esquinas
+    // redondeadas: si no, las puntas quedarian sin aclarar.
+    if(ratonEncima(rec)) DrawRectangleRec(rec, Fade(WHITE, 0.22f));
+}
+
+void dibujarBotonPausa(Rectangle rec)
+{
+    if(hayPausa) dibujarImagenBoton(texturaPausa, rec);
+    else         dibujarBoton(rec, "Pausa", false);
+}
+
 Rectangle zonaBotonOpciones()
 {
     return rectangulo(GetScreenWidth() - 60.0f, 18.0f, 40.0f, 40.0f);
@@ -185,6 +251,12 @@ Rectangle zonaBotonOpciones()
 
 void dibujarBotonOpciones(Rectangle rec)
 {
+    if(hayOpciones){
+        dibujarImagenBoton(texturaOpciones, rec);
+        return;
+    }
+
+    // ---- Sin arte: el engrane dibujado con figuras ----
     // El fondo y el resaltado son los de cualquier boton; solo cambia la etiqueta.
     dibujarBoton(rec, "", false);
 

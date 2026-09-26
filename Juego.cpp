@@ -390,7 +390,7 @@ static void dibujarBloqueJugador(int jugador)
  */
 static void dibujarMarcador()
 {
-    dibujarBoton(botonDePausa(), "Pausa", false);
+    dibujarBotonPausa(botonDePausa());
     dibujarBotonOpciones(botonDeOpciones());
 
     dibujarTextoCentradoSobreFondo("GATORAMA", 14, 28, COLOR_FONDO_TITULO);
