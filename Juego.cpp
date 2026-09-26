@@ -64,6 +64,31 @@ static DisenoTablero disenoActual()
     return calcularDiseno(t.Filas(), t.Columnas(), areaDeCartas(), RELACION_CARTA);
 }
 
+//***********************************************
+// ARTE DEL MARCADOR
+//***********************************************
+
+// El liston de arriba: toda la franja del marcador, 1280x140, de y = 0 hasta
+// donde empieza el tapete. Trae dibujada la palabra "GATORAMA", asi que con el
+// arte el titulo ya no se escribe con codigo. Encima van los botones, los
+// recuadros de los jugadores y la linea del tiempo.
+static const char* RUTA_LISTON = "recursos/listonJuego.png";
+
+static Texture2D texturaListon;
+static bool      hayListon = false;
+
+void CargarTexturasJuego()
+{
+    hayListon = cargarTexturaSiEsta(RUTA_LISTON, &texturaListon);
+}
+
+void DescargarTexturasJuego()
+{
+    if(hayListon) UnloadTexture(texturaListon);
+
+    hayListon = false;
+}
+
 /**
  * \brief El bot&oacute;n de pausa, arriba a la izquierda.
  * \return Su rect&aacute;ngulo en pantalla.
@@ -92,9 +117,10 @@ static Rectangle bloqueJugador(int jugador)
 {
     const float ANCHO = 330.0f;
 
-    if(jugador == 0) return rectangulo(20.0f, 76.0f, ANCHO, 56.0f);
+    // 62 de alto para las letras grandes: llega a y = 136, justo antes del tapete.
+    if(jugador == 0) return rectangulo(20.0f, 74.0f, ANCHO, 62.0f);
 
-    return rectangulo(GetScreenWidth() - 20.0f - ANCHO, 76.0f, ANCHO, 56.0f);
+    return rectangulo(GetScreenWidth() - 20.0f - ANCHO, 74.0f, ANCHO, 62.0f);
 }
 
 //***********************************************
@@ -368,20 +394,20 @@ static void dibujarBloqueJugador(int jugador)
 
     if(marcarTurno){
         // Sobre el recuadro claro, los colores de siempre.
-        dibujarDato(nombre, x, (int)rec.y + 7,  20, COLOR_BOTON_ACTIVO);
-        dibujarDato(marcas, x, (int)rec.y + 32, 16, COLOR_TEXTO);
+        dibujarDato(nombre, x, (int)rec.y + 5,  26, COLOR_BOTON_ACTIVO);
+        dibujarDato(marcas, x, (int)rec.y + 36, 20, COLOR_TEXTO);
     } else {
         // Sin recuadro, el texto va directo sobre la madera.
-        dibujarDatoSobreFondo(nombre, x, (int)rec.y + 7,  20, COLOR_FONDO_TEXTO);
-        dibujarDatoSobreFondo(marcas, x, (int)rec.y + 32, 16, COLOR_FONDO_TENUE);
+        dibujarDatoSobreFondo(nombre, x, (int)rec.y + 5,  26, COLOR_FONDO_TEXTO);
+        dibujarDatoSobreFondo(marcas, x, (int)rec.y + 36, 20, COLOR_FONDO_TENUE);
     }
 
     if(marcarTurno){
         const char* aviso = "TU TURNO";
-        int         ancho = MeasureText(aviso, 14);
+        int         ancho = MeasureText(aviso, 16);
 
         DrawText(aviso, (int)(rec.x + rec.width - ancho - 14), (int)rec.y + 10,
-                 14, COLOR_BOTON_ACTIVO);
+                 16, COLOR_BOTON_ACTIVO);
     }
 }
 
@@ -390,10 +416,13 @@ static void dibujarBloqueJugador(int jugador)
  */
 static void dibujarMarcador()
 {
+    // El liston va primero: todo lo demas del marcador se dibuja encima.
+    if(hayListon) DrawTexture(texturaListon, 0, 0, WHITE);
+
     dibujarBotonPausa(botonDePausa());
     dibujarBotonOpciones(botonDeOpciones());
 
-    dibujarTextoCentradoSobreFondo("GATORAMA", 14, 28, COLOR_FONDO_TITULO);
+    if(!hayListon) dibujarTextoCentradoSobreFondo("GATORAMA", 12, 38, COLOR_FONDO_TITULO);
 
     const InfoDificultad& nivel = DIFICULTADES[configActual.dificultad];
 
@@ -402,7 +431,7 @@ static void dibujarMarcador()
     dibujarDatoCentradoSobreFondo(TextFormat("%s  %dx%d      Intentos  %d      Tiempo  %s",
                                              nivel.nombre, nivel.filas, nivel.columnas,
                                              partida->Intentos(), comoReloj(partida->Tiempo())),
-                                  96, 18, COLOR_FONDO_TEXTO);
+                                  94, 24, COLOR_FONDO_TEXTO);
 
     for(int i = 0; i < partida->NumJugadores(); i++){
         dibujarBloqueJugador(i);

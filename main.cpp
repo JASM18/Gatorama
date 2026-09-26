@@ -71,6 +71,7 @@ int main()
     CargarTexturasOpciones();
     cargarTexturasBotones();
     CargarTexturasInstrucciones();
+    CargarTexturasJuego();
     cargarFondoGeneral();
     cargarFuenteDatos();
     IniciarAudio();
@@ -231,6 +232,7 @@ int main()
     DescargarTexturasOpciones();
     descargarTexturasBotones();
     DescargarTexturasInstrucciones();
+    DescargarTexturasJuego();
     descargarFondoGeneral();
     descargarFuenteDatos();
 

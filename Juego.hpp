@@ -22,6 +22,16 @@
 #include "ConfigPartida.hpp"
 
 /**
+ * \brief Carga el arte del marcador (el list&oacute;n de arriba). **Despu&eacute;s de InitWindow()**.
+ */
+void CargarTexturasJuego();
+
+/**
+ * \brief Libera el arte del marcador. **Antes de CloseWindow()**.
+ */
+void DescargarTexturasJuego();
+
+/**
  * \brief Arma una partida nueva con la configuraci&oacute;n dada.
  *
  * Reparte el tablero del tama&ntilde;o que le toca a la dificultad elegida y deja todo
