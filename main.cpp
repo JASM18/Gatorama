@@ -74,6 +74,7 @@ int main()
     CargarTexturasJuego();
     cargarFondoGeneral();
     cargarFuenteDatos();
+    CargarTexturasResultados();
     IniciarAudio();
 
     Escena_Estado escenaActual = Escena_menu;
@@ -235,9 +236,9 @@ int main()
     DescargarTexturasJuego();
     descargarFondoGeneral();
     descargarFuenteDatos();
+    DescargarTexturasResultados();
 
     CloseWindow(); // Cierra la ventana
-
     //cout << "\n\nEl programa se acabo!" << endl;
     //system("pause");
     return 0;

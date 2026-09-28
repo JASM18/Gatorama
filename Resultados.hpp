@@ -12,12 +12,27 @@
  * est&aacute;n mostrando se le desaparezcan de abajo.
  */
 
+
+
 #ifndef RESULTADOS_HPP_INCLUDED
 #define RESULTADOS_HPP_INCLUDED
 
 #include "Escena.hpp"
 #include "ConfigPartida.hpp"
 #include "Partida.hpp"
+
+/**
+ * \brief Carga las im&aacute;genes de las tarjetas.
+ *
+ * Se llama una vez, despu&eacute;s de abrir la ventana. Si falta un archivo no pasa nada:
+ * esa tarjeta se dibuja sin imagen.
+ */
+void CargarTexturasResultados();
+
+/**
+ * \brief Libera las im&aacute;genes cargadas. Se llama una vez, antes de cerrar la ventana.
+ */
+void DescargarTexturasResultados();
 
 /**
  * \brief Copia los n&uacute;meros de una partida terminada.

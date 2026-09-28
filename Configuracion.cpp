@@ -15,59 +15,112 @@
 #include "Opciones.hpp"
 #include "Dibujo.hpp"
 #include "Tema.hpp"
+#include "IconosModo.hpp"
+
+//***********************************************
+// PASOS DEL ASISTENTE
+//***********************************************
+
+// La configuracion ya no es una sola pantalla con todo encima: es un asistente que
+// hace una pregunta a la vez, como se preguntaria en voz alta.
+//
+//   Paso_modo  ->  Paso_nombre1  ->  [Paso_nombre2]  ->  Paso_dificultad  ->  Paso_resumen
+//
+// Paso_nombre2 solo existe en multijugador. En solitario simplemente no esta en la
+// cadena, asi que ya no hay un campo que esconder ni un enfoque que brincar.
+//
+// Modo y dificultad avanzan en cuanto se toca una opcion. Los nombres no pueden
+// hacerlo (hay que terminar de escribir), asi que se avanza con ENTER o con el boton
+// Siguiente. ESC regresa un paso; desde el primero, regresa al menu.
+//
+// Todo vive en este archivo, con un enum interno, para no tener que dar de alta
+// archivos nuevos en el proyecto.
+enum PasoConfiguracion {
+    Paso_modo,
+    Paso_nombre1,
+    Paso_nombre2,
+    Paso_dificultad,
+    Paso_resumen
+};
+
+static PasoConfiguracion pasoActual = Paso_modo;
 
 //***********************************************
 // ACOMODO DE LA PANTALLA
 //***********************************************
 
-// Los controles que recorre el teclado, en el orden en que se recorren.
-const int SIN_ENFOQUE    = -1;
-const int CTRL_SOLITARIO = 0;
-const int CTRL_MULTI     = 1;
-const int CTRL_FACIL     = 2;   // los tres niveles ocupan el 2, el 3 y el 4
-const int CTRL_NOMBRE1   = 5;
-const int CTRL_NOMBRE2   = 6;
-const int CTRL_INICIAR   = 7;
-const int NUM_CONTROLES  = 8;
+const int SIN_ENFOQUE  = -1;
+const int NADA_ELEGIDO = -1;
 
-// Cual control esta resaltado. Un solo dato para el raton y el teclado: el raton lo
-// mueve cuando de verdad se mueve, las flechas cuando se presionan, y quien lo
-// tenga es el que se ve con anillo. Tambien decide en que campo se escribe: si esta
-// sobre un nombre, las letras van ahi. Es el mismo modelo que el cursor de cartas
-// del tablero (VistaTablero + Juego): empieza en nada y se limpia al salir de todo.
-//
-// SIN_ENFOQUE al entrar: nada resaltado hasta que el jugador apunte o use las
-// flechas. Antes arrancaba en Iniciar y el boton se veia activo sin que nadie lo
-// tocara.
+// Cual opcion del paso actual esta resaltada (0, 1, 2...). Un solo dato para el
+// raton y el teclado: el raton lo mueve cuando de verdad se mueve, las flechas cuando
+// se presionan, y quien lo tenga es el que se ve resaltado. Es el mismo modelo que el
+// cursor de cartas del tablero (VistaTablero + Juego): empieza en nada y se limpia al
+// cambiar de paso.
 static int enfoque = SIN_ENFOQUE;
 
 // La ventana del engrane, abierta encima de la configuracion.
 static bool enOpciones = false;
 
-// El acomodo sigue el boceto del equipo: arriba el titulo, luego dos renglones de
-// botones centrados -los dos modos y las tres dificultades- y abajo el pergamino,
-// que ya no es solo un resumen sino el formulario: los nombres se escriben directo
-// en sus lineas y se "firma" con Iniciar, como un contrato.
+// Las tarjetas de modo y de dificultad miden lo mismo de alto y van a la misma altura,
+// para que al pasar de un paso a otro no brinque nada.
+static const float TARJETA_Y    = 200.0f;
+static const float TARJETA_ALTO = 280.0f;
 
-static Rectangle botonModo(int indice)
+static Rectangle tarjetaModo(int indice)
 {
-    // Dos de 200 con 30 de hueco: 430 de ancho, centrados en 1280.
-    return rectangulo(425.0f + indice * 230.0f, 108.0f, 200.0f, 50.0f);
+    // Dos de 300 con 50 de hueco, centradas.
+    const float ANCHO = 300.0f;
+    const float HUECO = 50.0f;
+    float       x0    = (GetScreenWidth() - (2.0f * ANCHO + HUECO)) / 2.0f;
+
+    return rectangulo(x0 + indice * (ANCHO + HUECO), TARJETA_Y, ANCHO, TARJETA_ALTO);
 }
 
-static Rectangle botonDificultad(int indice)
+static Rectangle tarjetaDificultad(int indice)
 {
-    // Tres de 170 con 25 de hueco: 560 de ancho, lo mismo que el pergamino.
-    return rectangulo(360.0f + indice * 195.0f, 170.0f, 170.0f, 50.0f);
+    // Tres de 240 con 30 de hueco, centradas.
+    const float ANCHO = 240.0f;
+    const float HUECO = 30.0f;
+    float       x0    = (GetScreenWidth() - (3.0f * ANCHO + 2.0f * HUECO)) / 2.0f;
+
+    return rectangulo(x0 + indice * (ANCHO + HUECO), TARJETA_Y, ANCHO, TARJETA_ALTO);
 }
 
+// El campo donde se escribe el nombre, grande: es lo unico que hay en la pantalla.
+static Rectangle campoNombreGrande()
+{
+    const float ANCHO = 560.0f;
+    const float ALTO  = 76.0f;
+
+    return rectangulo((GetScreenWidth() - ANCHO) / 2.0f, 300.0f, ANCHO, ALTO);
+}
+
+static Rectangle botonSiguiente()
+{
+    const float ANCHO = 240.0f;
+    const float ALTO  = 60.0f;
+
+    return rectangulo((GetScreenWidth() - ANCHO) / 2.0f, 430.0f, ANCHO, ALTO);
+}
+
+// Para quien juega solo con el raton: ESC ya regresa, pero un boton a la vista dice
+// que se puede. En el primer paso regresa al menu.
+static Rectangle botonAtras()
+{
+    return rectangulo(40.0f, GetScreenHeight() - 96.0f, 140.0f, 46.0f);
+}
+
+// El pergamino ya no comparte pantalla con los botones de modo y dificultad, asi que
+// baja a donde quede centrado entre los puntos de avance y el pie. Es el unico numero
+// que hay que tocar para moverlo (antes: 258).
 static Rectangle panelResumen()
 {
-    return rectangulo(360.0f, 258.0f, 560.0f, 400.0f);
+    return rectangulo((GetScreenWidth() - 560.0f) / 2.0f, 170.0f, 560.0f, 400.0f);
 }
 
 /**
- * \brief La l&iacute;nea del pergamino donde se escribe el nombre de un jugador.
+ * \brief La l&iacute;nea del pergamino donde va el nombre de un jugador.
  *
  * Es la raya que va despu&eacute;s de "Jugador 1:" o "Jugador 2:" en configResumen.png.
  * El texto se dibuja 8 px adentro, en la misma columna que Modo y Dificultad.
@@ -88,8 +141,7 @@ static Rectangle botonIniciar()
     Rectangle panel = panelResumen();
 
     // En la esquina inferior derecha del pergamino, como la firma al pie de un
-    // contrato: se elige la dificultad y los nombres arriba y se "firma" aqui para
-    // empezar. 210x105 mantiene la proporcion 2:1 del PNG para que "Iniciar" no se
+    // contrato. 210x105 mantiene la proporcion 2:1 del PNG para que "Iniciar" no se
     // estire.
     const float ANCHO = 210.0f;
     const float ALTO  = 105.0f;
@@ -97,6 +149,13 @@ static Rectangle botonIniciar()
     return rectangulo(panel.x + panel.width  - ANCHO - 20.0f,
                       panel.y + panel.height - ALTO  - 16.0f,
                       ANCHO, ALTO);
+}
+
+// Las listas de opciones se recorren con una funcion que da el rectangulo del
+// indice i. Iniciar es una lista de uno.
+static Rectangle rectIniciar(int)
+{
+    return botonIniciar();
 }
 
 //***********************************************
@@ -154,8 +213,8 @@ static const float ESPERA_BORRADO = 0.4f;
 static const float RITMO_BORRADO  = 0.05f;
 
 // Cuanto lleva apretado el retroceso, y cuanto falta para la siguiente letra. Un
-// solo par de contadores para los dos campos: como solo se escribe en el que tiene
-// el enfoque, nunca hay dos borrados corriendo al mismo tiempo.
+// solo par de contadores para los dos campos: como solo se escribe en uno a la vez,
+// nunca hay dos borrados corriendo al mismo tiempo.
 static float tiempoRetroceso = 0.0f;
 static float proximoBorrado  = 0.0f;
 
@@ -262,75 +321,118 @@ static void escribirEn(char* destino)
 }
 
 //***********************************************
+// NAVEGACION ENTRE PASOS
+//***********************************************
+
+static PasoConfiguracion pasoSiguiente(const ConfigPartida& config)
+{
+    switch(pasoActual){
+        case Paso_modo:       return Paso_nombre1;
+        case Paso_nombre1:    return config.modo == Modo_multijugador ? Paso_nombre2 : Paso_dificultad;
+        case Paso_nombre2:    return Paso_dificultad;
+        default:              return Paso_resumen;
+    }
+}
+
+static PasoConfiguracion pasoAnterior(const ConfigPartida& config)
+{
+    switch(pasoActual){
+        case Paso_resumen:    return Paso_dificultad;
+        case Paso_dificultad: return config.modo == Modo_multijugador ? Paso_nombre2 : Paso_nombre1;
+        case Paso_nombre2:    return Paso_nombre1;
+        default:              return Paso_modo;
+    }
+}
+
+/**
+ * \brief Cambia de paso y deja limpio lo que era del paso anterior.
+ */
+static void irAPaso(PasoConfiguracion nuevo)
+{
+    pasoActual = nuevo;
+    enfoque    = SIN_ENFOQUE;
+
+    // Si se cambia de paso con el retroceso apretado, la cuenta arranca de cero en
+    // el siguiente campo y no le borra de golpe lo que ya llevaba.
+    tiempoRetroceso = 0.0f;
+    proximoBorrado  = 0.0f;
+}
+
+//***********************************************
 // ACTUALIZAR
 //***********************************************
 
 void PrepararConfiguracion(ConfigPartida& config)
 {
     // Se rehace entera, no solo los nombres: si el nino anterior dejo Dificil y
-    // multijugador puestos, el siguiente arranca en un juego que no pidio.
+    // multijugador puestos, el siguiente arranca en un juego que no pidio. Y siempre
+    // se empieza por el primer paso; la configuracion no se recuerda.
     config = configPorDefecto();
 
-    enfoque    = SIN_ENFOQUE;
+    irAPaso(Paso_modo);
     enOpciones = false;
-
-    // Por si se sale de la pantalla con el retroceso apretado: al volver, la cuenta
-    // arranca de cero y no borra de golpe el nombre que se acaba de poner.
-    tiempoRetroceso = 0.0f;
-    proximoBorrado  = 0.0f;
 }
 
 /**
- * \brief Qu&eacute; control est&aacute; bajo el puntero, o SIN_ENFOQUE si ninguno.
+ * \brief Mueve el enfoque entre las opciones de una lista con las flechas.
  *
- * \param config Configuraci&oacute;n actual, para saber si el segundo nombre existe.
+ * \param cantidad Cuantas opciones tiene el paso.
  */
-static int controlBajoElRaton(const ConfigPartida& config)
+static void moverEnfoqueLista(int cantidad)
 {
-    if(ratonEncima(botonModo(0))) return CTRL_SOLITARIO;
-    if(ratonEncima(botonModo(1))) return CTRL_MULTI;
+    int salto = 0;
 
-    for(int i = 0; i < NUM_DIFICULTADES; i++){
-        if(ratonEncima(botonDificultad(i))) return CTRL_FACIL + i;
-    }
+    if(IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_RIGHT)) salto =  1;
+    if(IsKeyPressed(KEY_UP)   || IsKeyPressed(KEY_LEFT))  salto = -1;
 
-    if(ratonEncima(campoNombre(1))) return CTRL_NOMBRE1;
-
-    if(config.modo == Modo_multijugador && ratonEncima(campoNombre(2))) return CTRL_NOMBRE2;
-
-    if(ratonEncima(botonIniciar())) return CTRL_INICIAR;
-
-    return SIN_ENFOQUE;
-}
-
-/**
- * \brief Mueve el enfoque con las flechas, saltandose lo que no esta en pantalla.
- *
- * En solitario no hay segundo nombre, as&iacute; que ese control se brinca en la
- * direcci&oacute;n en la que se iba: parar el cursor en un campo invisible ser&iacute;a como
- * escribir a ciegas.
- *
- * \param config Configuraci&oacute;n actual, para saber si el segundo nombre existe.
- */
-static void moverEnfoqueConfiguracion(const ConfigPartida& config)
-{
-    int paso = 0;
-
-    if(IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_RIGHT)) paso =  1;
-    if(IsKeyPressed(KEY_UP)   || IsKeyPressed(KEY_LEFT))  paso = -1;
-
-    if(paso == 0) return;
+    if(salto == 0) return;
 
     // La primera flecha estrena el enfoque sin saltarse nada: hacia adelante entra
-    // por el primer control, hacia atras por el ultimo.
+    // por la primera opcion, hacia atras por la ultima.
     if(enfoque == SIN_ENFOQUE){
-        enfoque = (paso > 0) ? CTRL_SOLITARIO : CTRL_INICIAR;
+        enfoque = (salto > 0) ? 0 : cantidad - 1;
         return;
     }
 
-    do {
-        enfoque = (enfoque + paso + NUM_CONTROLES) % NUM_CONTROLES;
-    } while(config.modo == Modo_solitario && enfoque == CTRL_NOMBRE2);
+    enfoque = (enfoque + salto + cantidad) % cantidad;
+}
+
+/**
+ * \brief Atiende una lista de opciones (raton y teclado) y dice si se eligio una.
+ *
+ * \param cantidad Cuantas opciones tiene.
+ * \param rectDe   Da el rectangulo de la opcion i.
+ * \return El indice elegido, o NADA_ELEGIDO si en este fotograma no se eligio ninguna.
+ */
+static int actualizarLista(int cantidad, Rectangle (*rectDe)(int))
+{
+    // El raton solo cuenta cuando de verdad se movio: si se leyera cada fotograma,
+    // pisaria al instante lo que se acaba de elegir con las flechas. Al moverse fuera
+    // de todas las opciones, el enfoque se apaga. Es la misma regla que el cursor de
+    // cartas del tablero.
+    Vector2 movimientoRaton = GetMouseDelta();
+
+    if(movimientoRaton.x != 0.0f || movimientoRaton.y != 0.0f){
+        enfoque = SIN_ENFOQUE;
+
+        for(int i = 0; i < cantidad; i++){
+            if(ratonEncima(rectDe(i))) enfoque = i;
+        }
+    }
+
+    moverEnfoqueLista(cantidad);
+
+    // Un clic elige, y ademas se lleva el enfoque.
+    for(int i = 0; i < cantidad; i++){
+        if(botonClicado(rectDe(i))){
+            enfoque = i;
+            return i;
+        }
+    }
+
+    if(IsKeyPressed(KEY_ENTER) && enfoque != SIN_ENFOQUE) return enfoque;
+
+    return NADA_ELEGIDO;
 }
 
 Escena_Estado ActualizarConfiguracion(ConfigPartida& config)
@@ -349,71 +451,65 @@ Escena_Estado ActualizarConfiguracion(ConfigPartida& config)
         return Escena_configuracion;
     }
 
-    if(IsKeyPressed(KEY_ESCAPE)) return Escena_menu;
+    // ESC y el boton Atras hacen lo mismo: un paso para atras, o al menu si ya se
+    // esta en el primero.
+    if(IsKeyPressed(KEY_ESCAPE) || botonClicado(botonAtras())){
 
-    // El raton solo cuenta cuando de verdad se movio: si se leyera cada fotograma,
-    // pisaria al instante lo que se acaba de elegir con las flechas. Al moverse
-    // fuera de todos los controles, el enfoque se apaga. Es la misma regla que el
-    // cursor de cartas del tablero.
-    Vector2 movimientoRaton = GetMouseDelta();
+        if(pasoActual == Paso_modo) return Escena_menu;
 
-    if(movimientoRaton.x != 0.0f || movimientoRaton.y != 0.0f){
-        int bajo = controlBajoElRaton(config);
-
-        // Un nombre a medio escribir no suelta el enfoque solo porque el raton se
-        // hizo a un lado para no tapar las letras: se pierde hasta que el raton
-        // pase por otro control, o con las flechas.
-        bool escribiendo = (enfoque == CTRL_NOMBRE1 || enfoque == CTRL_NOMBRE2);
-
-        if(bajo != SIN_ENFOQUE || !escribiendo) enfoque = bajo;
+        irAPaso(pasoAnterior(config));
+        return Escena_configuracion;
     }
 
-    moverEnfoqueConfiguracion(config);
+    switch(pasoActual){
 
-    // ---- Clics: eligen y ademas se llevan el enfoque ----
-    // Que el clic mueva el enfoque evita el salto raro de picarle a Dificil con el
-    // raton y que la siguiente flecha continue desde donde estaba el teclado.
-    if(botonClicado(botonModo(0))){ config.modo = Modo_solitario;    enfoque = CTRL_SOLITARIO; }
-    if(botonClicado(botonModo(1))){ config.modo = Modo_multijugador; enfoque = CTRL_MULTI; }
+        case Paso_modo:
+        {
+            int elegido = actualizarLista(2, tarjetaModo);
 
-    for(int i = 0; i < NUM_DIFICULTADES; i++){
-        if(botonClicado(botonDificultad(i))){
-            config.dificultad = (Dificultad)i;
-            enfoque           = CTRL_FACIL + i;
+            if(elegido != NADA_ELEGIDO){
+                config.modo = (elegido == 0) ? Modo_solitario : Modo_multijugador;
+                irAPaso(Paso_nombre1);
+            }
+            break;
+        }
+
+        case Paso_nombre1:
+        case Paso_nombre2:
+        {
+            // Aqui no hay lista que recorrer: el campo siempre esta listo para
+            // escribir, sin tener que picarle primero.
+            char* destino = (pasoActual == Paso_nombre1) ? config.nombre1 : config.nombre2;
+
+            escribirEn(destino);
+
+            // ENTER es lo que uno espera despues de escribir un nombre.
+            if(IsKeyPressed(KEY_ENTER) || botonClicado(botonSiguiente())){
+                irAPaso(pasoSiguiente(config));
+            }
+            break;
+        }
+
+        case Paso_dificultad:
+        {
+            int elegido = actualizarLista(NUM_DIFICULTADES, tarjetaDificultad);
+
+            if(elegido != NADA_ELEGIDO){
+                config.dificultad = (Dificultad)elegido;
+                irAPaso(Paso_resumen);
+            }
+            break;
+        }
+
+        case Paso_resumen:
+        {
+            // ENTER inicia aunque nada este resaltado: es el ultimo paso.
+            if(actualizarLista(1, rectIniciar) != NADA_ELEGIDO || IsKeyPressed(KEY_ENTER)){
+                return Escena_juego;
+            }
+            break;
         }
     }
-
-    if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-
-        if(ratonEncima(campoNombre(1))){
-            enfoque = CTRL_NOMBRE1;
-        } else if(config.modo == Modo_multijugador && ratonEncima(campoNombre(2))){
-            enfoque = CTRL_NOMBRE2;
-        }
-    }
-
-    // Al cambiar a solitario el segundo campo desaparece; si tenia el enfoque hay
-    // que moverlo o se seguiria escribiendo en un cuadro invisible.
-    if(config.modo == Modo_solitario && enfoque == CTRL_NOMBRE2) enfoque = CTRL_NOMBRE1;
-
-    // ---- Escribir ----
-    if(enfoque == CTRL_NOMBRE1) escribirEn(config.nombre1);
-    if(enfoque == CTRL_NOMBRE2) escribirEn(config.nombre2);
-
-    // ---- Enter ----
-    // Sobre una opcion, Enter la elige. Sobre un nombre o sobre Iniciar, arranca
-    // la partida: escribir el nombre y darle Enter es lo que uno espera.
-    if(IsKeyPressed(KEY_ENTER)){
-
-        if(enfoque == CTRL_SOLITARIO)  config.modo = Modo_solitario;
-        else if(enfoque == CTRL_MULTI) config.modo = Modo_multijugador;
-        else if(enfoque >= CTRL_FACIL && enfoque < CTRL_FACIL + NUM_DIFICULTADES){
-            config.dificultad = (Dificultad)(enfoque - CTRL_FACIL);
-        }
-        else return Escena_juego;
-    }
-
-    if(botonClicado(botonIniciar())) return Escena_juego;
 
     return Escena_configuracion;
 }
@@ -423,32 +519,160 @@ Escena_Estado ActualizarConfiguracion(ConfigPartida& config)
 //***********************************************
 
 /**
- * \brief Dibuja un nombre sobre su l&iacute;nea del pergamino, editable.
- *
- * Con el enfoque, un velo claro marca la l&iacute;nea donde se est&aacute; escribiendo y
- * parpadea el cursor; mientras se edita se ve lo que va tecleado tal cual, aunque
- * est&eacute; vac&iacute;o. Sin enfoque se ve el nombre que va a quedar -si el campo est&aacute;
- * vac&iacute;o, el de por omisi&oacute;n-.
- *
- * \param rec      La l&iacute;nea (campoNombre).
- * \param tecleado Lo que el jugador lleva escrito.
- * \param final    El nombre que se usar&aacute; si se inicia ahora.
- * \param conFoco  Si es donde se est&aacute; escribiendo.
+ * \brief Escribe un texto centrado dentro de un ancho dado.
  */
-static void dibujarLineaNombre(Rectangle rec, const char* tecleado, const char* final, bool conFoco)
+static void dibujarTextoCentradoEn(const char* texto, float x, float ancho, int y, int tamano, Color color)
 {
-    const int TAMANO = 22;
-    int x = (int)rec.x + 8;
-    int y = (int)rec.y + 10;
+    int anchoTexto = MeasureText(texto, tamano);
 
-    if(!conFoco){
-        dibujarDato(final, x, y, TAMANO, COLOR_TEXTO);
+    DrawText(texto, (int)(x + (ancho - anchoTexto) / 2.0f), y, tamano, color);
+}
+
+/**
+ * \brief El fondo de una tarjeta de opcion.
+ *
+ * Resaltada (por raton o por teclado) se ve solida; el resto del tiempo, crema con un
+ * tinte y borde del color. El crema de base es para que se despegue de la madera del
+ * fondo: un tinte transparente encima de ella se ve turbio.
+ */
+static void dibujarTarjeta(Rectangle rec, Color color, bool resaltada)
+{
+    if(resaltada){
+        DrawRectangleRounded(rec, 0.12f, 10, color);
         return;
     }
 
-    DrawRectangleRounded(rec, 0.4f, 8, Fade(WHITE, 0.45f));
+    DrawRectangleRounded(rec, 0.12f, 10, COLOR_PANEL);
+    DrawRectangleRounded(rec, 0.12f, 10, Fade(color, 0.18f));
+    DrawRectangleRoundedLinesEx(rec, 0.12f, 10, 3.0f, color);
+}
 
-    dibujarDato(tecleado, x, y, TAMANO, COLOR_TEXTO);
+static void dibujarTarjetaModo(Rectangle rec, const char* titulo, const char* subtitulo,
+                               Color color, bool dosPersonas, bool resaltada)
+{
+    dibujarTarjeta(rec, color, resaltada);
+
+    Color   tinta      = resaltada ? WHITE : color;
+    Color   tintaTexto = resaltada ? WHITE : COLOR_TEXTO;
+    Vector2 centro     = { rec.x + rec.width / 2.0f, rec.y + 100.0f };
+
+    if(dosPersonas) iconoDosPersonas(centro, 70.0f, tinta);
+    else            iconoPersona(centro, 70.0f, tinta);
+
+    dibujarTextoCentradoEn(titulo,    rec.x, rec.width, (int)rec.y + 185, 34, tinta);
+    dibujarTextoCentradoEn(subtitulo, rec.x, rec.width, (int)rec.y + 235, 18, tintaTexto);
+}
+
+/**
+ * \brief Dibuja el tablero de una dificultad en chiquito, con sus filas y columnas.
+ *
+ * Es lo que le dice a un nino que no lee de corrido cual partida es mas larga: se ve.
+ */
+static void dibujarMiniTablero(Rectangle zona, int filas, int columnas, Color color)
+{
+    if(filas <= 0 || columnas <= 0) return;
+
+    const float HUECO = 4.0f;
+
+    float ladoAncho = (zona.width  - (columnas - 1) * HUECO) / columnas;
+    float ladoAlto  = (zona.height - (filas    - 1) * HUECO) / filas;
+    float lado      = (ladoAncho < ladoAlto) ? ladoAncho : ladoAlto;
+
+    float anchoTotal = columnas * lado + (columnas - 1) * HUECO;
+    float altoTotal  = filas    * lado + (filas    - 1) * HUECO;
+    float x0         = zona.x + (zona.width  - anchoTotal) / 2.0f;
+    float y0         = zona.y + (zona.height - altoTotal ) / 2.0f;
+
+    for(int f = 0; f < filas; f++){
+        for(int c = 0; c < columnas; c++){
+            DrawRectangleRounded(rectangulo(x0 + c * (lado + HUECO), y0 + f * (lado + HUECO), lado, lado),
+                                 0.25f, 4, color);
+        }
+    }
+}
+
+static void dibujarTarjetaDificultad(Rectangle rec, const InfoDificultad& nivel, bool resaltada)
+{
+    dibujarTarjeta(rec, COLOR_SELECCION, resaltada);
+
+    Color tinta      = resaltada ? WHITE : COLOR_SELECCION;
+    Color tintaTexto = resaltada ? WHITE : COLOR_TEXTO;
+
+    dibujarMiniTablero(rectangulo(rec.x + 30.0f, rec.y + 26.0f, rec.width - 60.0f, 120.0f),
+                       nivel.filas, nivel.columnas, tinta);
+
+    dibujarTextoCentradoEn(nivel.nombre, rec.x, rec.width, (int)rec.y + 168, 32, tinta);
+
+    // Debajo del nombre, cuantas cartas trae. Es el dato que de verdad le dice al
+    // jugador que tan larga va a ser la partida.
+    dibujarTextoCentradoEn(TextFormat("%d cartas", nivel.filas * nivel.columnas),
+                           rec.x, rec.width, (int)rec.y + 220, 20, tintaTexto);
+}
+
+/**
+ * \brief Un boton grande de accion, en el color que se le pase. Va siempre solido:
+ *        es lo unico que hay que tocar en el paso.
+ */
+static void dibujarBotonAccion(Rectangle rec, const char* texto, Color color)
+{
+    const int TAMANO = 26;
+
+    DrawRectangleRounded(rec, 0.35f, 10, color);
+
+    dibujarTextoCentradoEn(texto, rec.x, rec.width,
+                           (int)(rec.y + (rec.height - TAMANO) / 2.0f), TAMANO, WHITE);
+}
+
+static void dibujarPasoModo()
+{
+    dibujarTarjetaModo(tarjetaModo(0), "Solitario", "Juegas tu solo",
+                       COLOR_MODO_SOLO, false, enfoque == 0);
+
+    dibujarTarjetaModo(tarjetaModo(1), "1 vs 1", "Juegas con un amigo",
+                       COLOR_MODO_VS, true, enfoque == 1);
+}
+
+static void dibujarPasoDificultad()
+{
+    for(int i = 0; i < NUM_DIFICULTADES; i++){
+        dibujarTarjetaDificultad(tarjetaDificultad(i), DIFICULTADES[i], enfoque == i);
+    }
+}
+
+/**
+ * \brief La pantalla de un nombre: un icono, un campo grande y Siguiente.
+ *
+ * Mientras se escribe se ve lo tecleado con su cursor parpadeante. Si el campo esta
+ * vacio se ve, atenuado, el nombre que quedara por omision.
+ *
+ * \param numJugador 1 o 2.
+ */
+static void dibujarPasoNombre(const ConfigPartida& config, int numJugador)
+{
+    Color color = (config.modo == Modo_multijugador) ? COLOR_MODO_VS : COLOR_MODO_SOLO;
+
+    // El icono va sobre un circulo crema para que se lea contra la madera.
+    Vector2 centroIcono = { GetScreenWidth() / 2.0f, 205.0f };
+
+    DrawCircleV(centroIcono, 64.0f, COLOR_PANEL);
+    DrawRing(centroIcono, 60.0f, 64.0f, 0.0f, 360.0f, 48, color);
+    iconoPersona(centroIcono, 52.0f, color);
+
+    // ---- Campo ----
+    Rectangle   campo    = campoNombreGrande();
+    const char* tecleado = (numJugador == 1) ? config.nombre1 : config.nombre2;
+    const int   TAMANO   = 36;
+    int         x        = (int)campo.x + 24;
+    int         y        = (int)(campo.y + (campo.height - TAMANO) / 2.0f);
+
+    DrawRectangleRounded(campo, 0.3f, 10, COLOR_PANEL);
+    DrawRectangleRoundedLinesEx(campo, 0.3f, 10, 4.0f, color);
+
+    if(tecleado[0] == '\0'){
+        dibujarDato(nombreDeJugador(config, numJugador), x, y, TAMANO, COLOR_TENUE);
+    } else {
+        dibujarDato(tecleado, x, y, TAMANO, COLOR_TEXTO);
+    }
 
     // El cursor prende y apaga cada medio segundo. GetTime da los segundos desde
     // que abrio el juego; el residuo entre 1 parte ese segundo en dos mitades, y en
@@ -456,51 +680,34 @@ static void dibujarLineaNombre(Rectangle rec, const char* tecleado, const char* 
     bool visible = (GetTime() - (int)GetTime()) < 0.5;
 
     if(visible){
-        DrawRectangle(x + anchoDato(tecleado, TAMANO) + 2, y, 2, TAMANO, COLOR_SELECCION);
+        DrawRectangle(x + anchoDato(tecleado, TAMANO) + 2, y, 3, TAMANO, color);
     }
+
+    // ---- Siguiente ----
+    Rectangle siguiente = botonSiguiente();
+
+    dibujarBotonAccion(siguiente, "Siguiente", color);
+
+    if(ratonEncima(siguiente)) dibujarAnilloEnfoque(siguiente);
 }
 
-void DibujarConfiguracion(const ConfigPartida& config)
+/**
+ * \brief El resumen: el pergamino con lo elegido y la firma para empezar.
+ *
+ * Todo se lee, nada se escribe aqui: modo, dificultad y nombres ya se eligieron en
+ * los pasos de antes.
+ */
+static void dibujarPasoResumen(const ConfigPartida& config)
 {
-    dibujarTextoCentradoSobreFondo("CONFIGURACION DE LA PARTIDA", 32, 34, COLOR_FONDO_TITULO);
-
-    // ---- Modo ----
-    dibujarBoton(botonModo(0), "Solitario",    config.modo == Modo_solitario);
-    dibujarBoton(botonModo(1), "Multijugador", config.modo == Modo_multijugador);
-
-    if(enfoque == CTRL_SOLITARIO) dibujarAnilloEnfoque(botonModo(0));
-    if(enfoque == CTRL_MULTI)     dibujarAnilloEnfoque(botonModo(1));
-
-    // ---- Dificultad ----
-    for(int i = 0; i < NUM_DIFICULTADES; i++){
-        const InfoDificultad& nivel = DIFICULTADES[i];
-        Rectangle             rec   = botonDificultad(i);
-
-        dibujarBoton(rec, nivel.nombre, config.dificultad == (Dificultad)i);
-
-        if(enfoque == CTRL_FACIL + i) dibujarAnilloEnfoque(rec);
-
-        // Debajo de cada boton, cuantas cartas trae. Es el dato que de verdad le
-        // dice al jugador que tan larga va a ser la partida.
-        const char* cuantas  = TextFormat("%d cartas", nivel.filas * nivel.columnas);
-        int         anchoSub = anchoDato(cuantas, 16);
-
-        dibujarDatoSobreFondo(cuantas,
-                              (int)(rec.x + (rec.width - anchoSub) / 2.0f),
-                              (int)(rec.y + rec.height + 6.0f),
-                              16, COLOR_FONDO_TENUE);
-    }
-
-    // ---- Pergamino: el formulario ----
     Rectangle panel = panelResumen();
 
     const InfoDificultad& nivel = DIFICULTADES[config.dificultad];
 
-    const char* modoTexto = config.modo == Modo_solitario ? "Solitario" : "Multijugador";
+    const char* modoTexto = config.modo == Modo_solitario ? "Solitario" : "1 vs 1";
 
     // Los cuatro renglones, medidos sobre configResumen.png: donde empieza el
     // valor y la altura de cada linea. Sin la lamina se usan los mismos, para que
-    // los campos de nombre no cambien de lugar si falta el arte.
+    // los valores no cambien de lugar si falta el arte.
     const int XV     = (int)panel.x + 208;
     const int XR     = (int)panel.x + 36;
     const int Y_MODO = (int)panel.y + 88;
@@ -530,20 +737,19 @@ void DibujarConfiguracion(const ConfigPartida& config)
         DrawText("Jugador 2:",    XR, Y_J2,   TAMANO, COLOR_TENUE);
     }
 
-    // Modo y dificultad solo se leen: se cambian con los botones de arriba. La
-    // dificultad va corta -"nombre  FxC"- porque la version larga no cabe en la linea.
+    // La dificultad va corta -"nombre  FxC"- porque la version larga no cabe en la linea.
     dibujarDato(modoTexto, XV, Y_MODO, TAMANO, COLOR_TEXTO);
     dibujarDato(TextFormat("%s   %dx%d", nivel.nombre, nivel.filas, nivel.columnas),
                 XV, Y_DIF, TAMANO, COLOR_TEXTO);
 
-    // Los nombres si se escriben aqui mismo, sobre su linea.
-    dibujarLineaNombre(campoNombre(1), config.nombre1, nombreDeJugador(config, 1),
-                       enfoque == CTRL_NOMBRE1);
+    // Los nombres ya escritos: lo que hay tecleado, o el de por omision si se dejo
+    // vacio. "Jugador 2:" esta impreso siempre; en solitario su linea se queda vacia.
+    dibujarDato(nombreDeJugador(config, 1), (int)campoNombre(1).x + 8, (int)campoNombre(1).y + 10,
+                TAMANO, COLOR_TEXTO);
 
-    // "Jugador 2:" esta impreso siempre; en solitario su linea se queda vacia.
     if(config.modo == Modo_multijugador){
-        dibujarLineaNombre(campoNombre(2), config.nombre2, nombreDeJugador(config, 2),
-                           enfoque == CTRL_NOMBRE2);
+        dibujarDato(nombreDeJugador(config, 2), (int)campoNombre(2).x + 8, (int)campoNombre(2).y + 10,
+                    TAMANO, COLOR_TEXTO);
     }
 
     // ---- Boton Iniciar ----
@@ -552,7 +758,7 @@ void DibujarConfiguracion(const ConfigPartida& config)
     if(hayIniciarActivo && hayIniciarInactivo){
 
         // Resaltado por raton o por teclado: en los dos casos se ve el activo.
-        bool      resaltado = ratonEncima(zonaIniciar) || enfoque == CTRL_INICIAR;
+        bool      resaltado = ratonEncima(zonaIniciar) || enfoque == 0;
         Texture2D tex       = resaltado ? texturaIniciarActivo : texturaIniciarInactivo;
 
         Rectangle origen  = { 0.0f, 0.0f, (float)tex.width, (float)tex.height };
@@ -562,15 +768,98 @@ void DibujarConfiguracion(const ConfigPartida& config)
 
     } else {
         // Sin las laminas, el boton dibujado de siempre.
-        dibujarBoton(zonaIniciar, "Iniciar", enfoque == CTRL_INICIAR);
+        dibujarBoton(zonaIniciar, "Iniciar", enfoque == 0);
     }
 
     // La firma no lleva anillo de enfoque: el cambio de tinta -cafe a morada-
     // cuando el raton entra o el teclado la elige ya dice cual esta a punto de
     // activarse, y un recuadro sobre el pergamino rompia la ilusion.
+}
 
-    dibujarTextoCentradoSobreFondo("Clic en tu nombre para escribirlo     ESC para volver     ENTER para iniciar",
-                                   GetScreenHeight() - 40, 18, COLOR_FONDO_TENUE);
+/**
+ * \brief Que numero de paso es el actual, contando desde 0, segun el modo elegido.
+ */
+static int indiceDelPaso(const ConfigPartida& config)
+{
+    bool multi = (config.modo == Modo_multijugador);
+
+    switch(pasoActual){
+        case Paso_modo:       return 0;
+        case Paso_nombre1:    return 1;
+        case Paso_nombre2:    return 2;
+        case Paso_dificultad: return multi ? 3 : 2;
+        default:              return multi ? 4 : 3;
+    }
+}
+
+/**
+ * \brief Los puntitos de avance: cuantos pasos van y cuantos faltan.
+ *
+ * En solitario son cuatro; en multijugador cinco, porque hay un nombre mas. Al
+ * elegir el modo en el primer paso, la cuenta puede pasar de cuatro a cinco.
+ */
+static void dibujarAvance(const ConfigPartida& config)
+{
+    const int   total  = (config.modo == Modo_multijugador) ? 5 : 4;
+    const int   actual = indiceDelPaso(config);
+    const float RADIO  = 7.0f;
+    const float HUECO  = 26.0f;
+
+    float x0 = GetScreenWidth() / 2.0f - (total - 1) * HUECO / 2.0f;
+
+    for(int i = 0; i < total; i++){
+        Vector2 centro = { x0 + i * HUECO, 92.0f };
+
+        if(i <= actual){
+            DrawCircleV(centro, RADIO, COLOR_SELECCION);
+        } else {
+            DrawCircleV(centro, RADIO, Fade(WHITE, 0.35f));
+        }
+    }
+}
+
+static const char* tituloDelPaso(const ConfigPartida& config)
+{
+    switch(pasoActual){
+        case Paso_modo:       return "ELIGE COMO QUIERES JUGAR";
+        case Paso_nombre1:    return config.modo == Modo_multijugador ? "JUGADOR 1: ESCRIBE TU NOMBRE"
+                                                                       : "ESCRIBE TU NOMBRE";
+        case Paso_nombre2:    return "JUGADOR 2: ESCRIBE TU NOMBRE";
+        case Paso_dificultad: return "ELIGE LA DIFICULTAD";
+        default:              return "LISTO PARA JUGAR";
+    }
+}
+
+static const char* ayudaDelPaso()
+{
+    switch(pasoActual){
+        case Paso_modo:
+        case Paso_dificultad: return "Toca una opcion     ESC para volver";
+        case Paso_nombre1:
+        case Paso_nombre2:    return "Escribe tu nombre     ENTER para continuar     ESC para volver";
+        default:              return "ESC para volver     ENTER para iniciar";
+    }
+}
+
+void DibujarConfiguracion(const ConfigPartida& config)
+{
+    dibujarTextoCentradoSobreFondo(tituloDelPaso(config), 32, 34, COLOR_FONDO_TITULO);
+
+    dibujarAvance(config);
+
+    switch(pasoActual){
+        case Paso_modo:       dibujarPasoModo();              break;
+        case Paso_nombre1:    dibujarPasoNombre(config, 1);   break;
+        case Paso_nombre2:    dibujarPasoNombre(config, 2);   break;
+        case Paso_dificultad: dibujarPasoDificultad();        break;
+        case Paso_resumen:    dibujarPasoResumen(config);     break;
+    }
+
+    Rectangle atras = botonAtras();
+
+    dibujarBoton(atras, "Atras", ratonEncima(atras));
+
+    dibujarTextoCentradoSobreFondo(ayudaDelPaso(), GetScreenHeight() - 40, 18, COLOR_FONDO_TENUE);
 
     dibujarBotonOpciones(zonaBotonOpciones());
 
