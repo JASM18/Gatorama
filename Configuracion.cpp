@@ -40,6 +40,39 @@ enum PasoConfiguracion {
 static PasoConfiguracion pasoActual = Paso_modoYnombre;
 
 //***********************************************
+// ARTE DE LA PANTALLA
+//***********************************************
+
+// Una imagen completa de 1280x720 por cada vista del asistente. Traen dibujados
+// el titulo, los escudos de modo, los pergaminos de los nombres, "Siguiente",
+// "Atras" y las tres tarjetas de dificultad; el codigo solo escribe los nombres y
+// marca lo elegido. Un pixel de la imagen es un pixel de la pantalla, asi que las
+// zonas de abajo se midieron directo sobre los PNG.
+//
+// Las dos del primer paso comparten el acomodo -escudos, Siguiente, Atras- y solo
+// cambian los pergaminos: uno ancho en solitario, dos en 1 vs 1.
+static const char* RUTA_UN_JUGADOR   = "recursos/unJugadorConfig.png";
+static const char* RUTA_DOS_JUGADORES = "recursos/dosJugadoresConfig.png";
+static const char* RUTA_DIFICULTAD   = "recursos/dificultadConfig.png";
+
+static Texture2D texturaUnJugador;
+static Texture2D texturaDosJugadores;
+static Texture2D texturaDificultad;
+
+static bool hayUnJugador    = false;
+static bool hayDosJugadores = false;
+static bool hayDificultad   = false;
+
+/** \brief Si el primer paso tiene su arte completo (las dos variantes). */
+static bool artePasoModo()
+{
+    return hayUnJugador && hayDosJugadores;
+}
+
+// Tinta cafe oscura para los nombres sobre los pergaminos del arte.
+static const Color COLOR_TINTA = { 62, 46, 30, 255 };
+
+//***********************************************
 // ACOMODO DE LA PANTALLA
 //***********************************************
 
@@ -66,6 +99,12 @@ static bool enOpciones = false;
  */
 static Rectangle tarjetaModo(int indice)
 {
+    // Con el arte, los dos escudos: Solitario a la izquierda, 1 vs 1 a la derecha.
+    if(artePasoModo()){
+        return (indice == 0) ? rectangulo(348.0f, 120.0f, 287.0f, 178.0f)
+                             : rectangulo(650.0f, 120.0f, 285.0f, 178.0f);
+    }
+
     const float ANCHO = 260.0f;
     const float ALTO  = 150.0f;
     const float HUECO = 40.0f;
@@ -77,6 +116,17 @@ static Rectangle tarjetaModo(int indice)
 
 static Rectangle tarjetaDificultad(int indice)
 {
+    // Con el arte, las tres tarjetas con su marco oscuro.
+    if(hayDificultad){
+        static const Rectangle TARJETAS[3] = {
+            { 316.0f, 186.0f, 211.0f, 252.0f },   // Facil
+            { 546.0f, 188.0f, 210.0f, 250.0f },   // Normal
+            { 770.0f, 185.0f, 209.0f, 254.0f }    // Dificil
+        };
+
+        return TARJETAS[indice];
+    }
+
     // Tres de 240 con 30 de hueco, centradas. Estas si pueden ser grandes: en su
     // paso no comparten pantalla con nada mas.
     const float ANCHO = 240.0f;
@@ -96,6 +146,9 @@ static const float ALTO_CAMPO_NOMBRE = 76.0f;
 // El campo del nombre en solitario: uno solo, ancho completo.
 static Rectangle campoNombreGrande()
 {
+    // Con el arte, la parte crema del pergamino ancho.
+    if(artePasoModo()) return rectangulo(374.0f, 308.0f, 533.0f, 74.0f);
+
     const float ANCHO = 560.0f;
 
     return rectangulo((GetScreenWidth() - ANCHO) / 2.0f, 300.0f, ANCHO, ALTO_CAMPO_NOMBRE);
@@ -115,6 +168,13 @@ static Rectangle campoNombreGrande()
  */
 static Rectangle campoNombreDoble(int indice)
 {
+    // Con el arte, la parte crema de cada pergamino. Arriba a la izquierda traen
+    // impreso "Player1:" / "Player2:"; el nombre va debajo.
+    if(artePasoModo()){
+        return (indice == 0) ? rectangulo(344.0f, 313.0f, 276.0f, 83.0f)
+                             : rectangulo(659.0f, 315.0f, 271.0f, 82.0f);
+    }
+
     const float ANCHO = 260.0f;
     const float HUECO = 40.0f;
     const float Y     = 312.0f;
@@ -125,6 +185,8 @@ static Rectangle campoNombreDoble(int indice)
 
 static Rectangle botonSiguiente()
 {
+    if(artePasoModo()) return rectangulo(520.0f, 428.0f, 240.0f, 72.0f);
+
     const float ANCHO = 240.0f;
     const float ALTO  = 60.0f;
 
@@ -135,6 +197,11 @@ static Rectangle botonSiguiente()
 // que se puede. En el primer paso regresa al menu.
 static Rectangle botonAtras()
 {
+    // Las dos imagenes lo traen en el mismo lugar, abajo a la izquierda.
+    bool conArte = (pasoActual == Paso_modoYnombre) ? artePasoModo() : hayDificultad;
+
+    if(conArte) return rectangulo(37.0f, 622.0f, 148.0f, 56.0f);
+
     return rectangulo(40.0f, GetScreenHeight() - 96.0f, 140.0f, 46.0f);
 }
 
@@ -142,15 +209,22 @@ static Rectangle botonAtras()
 // ARTE DE LA PANTALLA
 //***********************************************
 
-// Ya no hay pergamino ni boton Iniciar con textura: la partida arranca en cuanto
-// se elige la dificultad, asi que no hay una pantalla final que "firmar". Estas dos
-// funciones se quedan -Juego.cpp las sigue llamando- pero ya no cargan nada.
 void CargarTexturasConfiguracion()
 {
+    hayUnJugador    = cargarTexturaSiEsta(RUTA_UN_JUGADOR,    &texturaUnJugador);
+    hayDosJugadores = cargarTexturaSiEsta(RUTA_DOS_JUGADORES, &texturaDosJugadores);
+    hayDificultad   = cargarTexturaSiEsta(RUTA_DIFICULTAD,    &texturaDificultad);
 }
 
 void DescargarTexturasConfiguracion()
 {
+    if(hayUnJugador)    UnloadTexture(texturaUnJugador);
+    if(hayDosJugadores) UnloadTexture(texturaDosJugadores);
+    if(hayDificultad)   UnloadTexture(texturaDificultad);
+
+    hayUnJugador    = false;
+    hayDosJugadores = false;
+    hayDificultad   = false;
 }
 
 //***********************************************
@@ -605,6 +679,88 @@ static void dibujarCampoNombre(Rectangle campo, const char* tecleado, const char
 }
 
 /**
+ * \brief Un velo claro sobre una zona del arte, para marcar lo elegido o lo que est&aacute;
+ *        bajo el cursor.
+ *
+ * Es blanco y no morado como marcarPlaca: el arte de esta pantalla es morado, y un
+ * velo morado encima no se ver&iacute;a.
+ *
+ * \param rec       La zona.
+ * \param opacidad  Qu&eacute; tanto aclara, de 0 a 1.
+ */
+static void aclararZona(Rectangle rec, float opacidad)
+{
+    DrawRectangleRounded(rec, 0.15f, 8, Fade(WHITE, opacidad));
+}
+
+/**
+ * \brief Un nombre escrito sobre su pergamino del arte, con cursor si se est&aacute; editando.
+ *
+ * \param tecleado  Lo que lleva escrito.
+ * \param porOmision El nombre que se usar&aacute; si se deja vac&iacute;o (se ve m&aacute;s tenue).
+ * \param x, y      D&oacute;nde va la primera letra.
+ * \param tamano    Alto de la letra.
+ * \param activo    Si recibe el teclado: lleva cursor.
+ */
+static void dibujarNombreEnPergamino(const char* tecleado, const char* porOmision,
+                                     int x, int y, int tamano, bool activo)
+{
+    if(tecleado[0] == '\0'){
+        dibujarDato(porOmision, x, y, tamano, Fade(COLOR_TINTA, 0.45f));
+    } else {
+        dibujarDato(tecleado, x, y, tamano, COLOR_TINTA);
+    }
+
+    if(!activo) return;
+
+    bool visible = (GetTime() - (int)GetTime()) < 0.5;
+
+    if(visible) DrawRectangle(x + anchoDato(tecleado, tamano) + 2, y, 3, tamano, COLOR_TINTA);
+}
+
+/**
+ * \brief El primer paso dibujado con el arte: escudos, pergamino(s) y Siguiente.
+ */
+static void dibujarPasoModoConArte(const ConfigPartida& config)
+{
+    bool dos = (config.modo == Modo_multijugador);
+
+    DrawTexture(dos ? texturaDosJugadores : texturaUnJugador, 0, 0, WHITE);
+
+    // El escudo del modo elegido se aclara; el otro, solo si el raton esta encima.
+    for(int i = 0; i < 2; i++){
+        bool elegido = (i == 0) ? !dos : dos;
+        Rectangle escudo = tarjetaModo(i);
+
+        if(elegido)                  aclararZona(escudo, 0.22f);
+        else if(ratonEncima(escudo)) aclararZona(escudo, 0.10f);
+    }
+
+    if(dos){
+        for(int i = 0; i < 2; i++){
+            Rectangle   campo  = campoNombreDoble(i);
+            bool        activo = (campoActivo == i);
+            const char* nombre = (i == 0) ? config.nombre1 : config.nombre2;
+
+            // Con dos a la vista, el que recibe el teclado se aclara.
+            if(activo) aclararZona(campo, 0.35f);
+
+            // Debajo del "PlayerN:" impreso en el arte.
+            dibujarNombreEnPergamino(nombre, nombreDeJugador(config, i + 1),
+                                     (int)campo.x + 22, (int)campo.y + 36, 30, activo);
+        }
+    } else {
+        Rectangle campo = campoNombreGrande();
+
+        dibujarNombreEnPergamino(config.nombre1, nombreDeJugador(config, 1),
+                                 (int)campo.x + 24, (int)(campo.y + (campo.height - 40.0f) / 2.0f),
+                                 40, true);
+    }
+
+    marcarPlaca(botonSiguiente(), false, ratonEncima(botonSiguiente()));
+}
+
+/**
  * \brief El paso combinado: elegir modo y escribir el/los nombres.
  *
  * En solitario, un campo ancho para el jugador 1. En 1 vs 1, dos campos uno junto
@@ -613,6 +769,11 @@ static void dibujarCampoNombre(Rectangle campo, const char* tecleado, const char
  */
 static void dibujarPasoModoYNombre(const ConfigPartida& config)
 {
+    if(artePasoModo()){
+        dibujarPasoModoConArte(config);
+        return;
+    }
+
     dibujarTarjetaModo(tarjetaModo(0), "Solitario", "Juegas tu solo",
                        COLOR_MODO_SOLO, false, config.modo == Modo_solitario);
 
@@ -645,6 +806,13 @@ static void dibujarPasoModoYNombre(const ConfigPartida& config)
 
 static void dibujarPasoDificultad()
 {
+    if(hayDificultad){
+        DrawTexture(texturaDificultad, 0, 0, WHITE);
+
+        if(enfoque != SIN_ENFOQUE) aclararZona(tarjetaDificultad(enfoque), 0.30f);
+        return;
+    }
+
     for(int i = 0; i < NUM_DIFICULTADES; i++){
         dibujarTarjetaDificultad(tarjetaDificultad(i), DIFICULTADES[i], enfoque == i);
     }
@@ -674,7 +842,11 @@ static const char* ayudaDelPaso(const ConfigPartida& config)
 
 void DibujarConfiguracion(const ConfigPartida& config)
 {
-    dibujarTextoCentradoSobreFondo(tituloDelPaso(config), 24, 30, COLOR_FONDO_TITULO);
+    // Con el arte del paso, el titulo, "Atras" y la ayuda ya vienen en la imagen o
+    // sobran: el arte se explica solo, y la linea de ayuda chocaba con el escudo.
+    bool conArte = (pasoActual == Paso_modoYnombre) ? artePasoModo() : hayDificultad;
+
+    if(!conArte) dibujarTextoCentradoSobreFondo(tituloDelPaso(config), 24, 30, COLOR_FONDO_TITULO);
 
     switch(pasoActual){
         case Paso_modoYnombre: dibujarPasoModoYNombre(config); break;
@@ -683,9 +855,13 @@ void DibujarConfiguracion(const ConfigPartida& config)
 
     Rectangle atras = botonAtras();
 
-    dibujarBoton(atras, "Atras", ratonEncima(atras));
+    if(conArte){
+        marcarPlaca(atras, false, ratonEncima(atras));
+    } else {
+        dibujarBoton(atras, "Atras", ratonEncima(atras));
 
-    dibujarTextoCentradoSobreFondo(ayudaDelPaso(config), GetScreenHeight() - 40, 18, COLOR_FONDO_TENUE);
+        dibujarTextoCentradoSobreFondo(ayudaDelPaso(config), GetScreenHeight() - 40, 18, COLOR_FONDO_TENUE);
+    }
 
     dibujarBotonOpciones(zonaBotonOpciones());
 

@@ -50,7 +50,8 @@ struct DisenoTablero {
     int   columnas;     ///< Cartas por renglon
     float anchoCarta;   ///< Ancho de una carta en p&iacute;xeles
     float altoCarta;    ///< Alto de una carta en p&iacute;xeles
-    float separacion;   ///< Hueco entre dos cartas vecinas, en p&iacute;xeles
+    float separacion;   ///< Hueco entre dos renglones, en p&iacute;xeles
+    float separacionX;  ///< Hueco entre dos columnas, en p&iacute;xeles (puede ser mayor)
     float pasoX;        ///< Cu&aacute;nto avanzar en X de una carta a la siguiente
     float pasoY;        ///< Cu&aacute;nto avanzar en Y de un rengl&oacute;n al siguiente
     float origenX;      ///< Esquina izquierda de la carta (0,0)
@@ -93,9 +94,12 @@ Rectangle areaDeCartas();
  * \param columnas        Cartas por rengl&oacute;n (mayor que cero).
  * \param area            Rect&aacute;ngulo de pantalla donde debe caber todo.
  * \param relacionAspecto Ancho dividido entre alto de la carta (0.6667 para 2:3, 1.0 para cuadrada).
+ * \param huecoX          Cu&aacute;ntas veces m&aacute;s ancho va el hueco entre columnas que entre
+ *                        renglones. 1 lo deja parejo; nunca pasa de lo que sobra en la celda.
  * \return El acomodo ya resuelto.
  */
-DisenoTablero calcularDiseno(int filas, int columnas, Rectangle area, float relacionAspecto);
+DisenoTablero calcularDiseno(int filas, int columnas, Rectangle area, float relacionAspecto,
+                             float huecoX = 1.0f);
 
 /**
  * \brief D&oacute;nde queda una carta concreta de la cuadr&iacute;cula.

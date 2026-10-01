@@ -32,6 +32,7 @@ struct InfoDificultad {
     const char* nombre;   ///< Nombre que se le muestra al jugador
     int filas;            ///< Renglones de cartas
     int columnas;         ///< Cartas por renglon
+    float huecoX;         ///< Cuantas veces mas ancho es el hueco entre columnas que entre renglones (1 = parejo)
 };
 
 // Los tres niveles viven aqui como datos, no como una cadena de if. Cambiar un
@@ -42,9 +43,9 @@ struct InfoDificultad {
 // solo cubre ASCII, y "Facil" con acento saldria con un simbolo raro en pantalla.
 // Cuando se cargue una fuente propia con SetTextureFilter esto se puede corregir.
 const InfoDificultad DIFICULTADES[NUM_DIFICULTADES] = {
-    { "Facil",   2,  5 },   // 10 cartas -> 5 pares
-    { "Normal",  3,  6 },   // 18 cartas -> 9 pares
-    { "Dificil", 3, 10 }    // 30 cartas -> 15 pares
+    { "Facil",   2,  5, 1.0f },   // 10 cartas -> 5 pares
+    { "Normal",  3,  6, 2.5f },   // 18 cartas -> 9 pares; con 6 columnas sobra ancho y se reparte
+    { "Dificil", 3, 10, 1.0f }    // 30 cartas -> 15 pares
 };
 
 /**

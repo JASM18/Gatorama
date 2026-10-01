@@ -61,17 +61,18 @@ static DisenoTablero disenoActual()
 
     // areaDeCartas y no areaDelTablero: el tapete cubre todo, las cartas van
     // metidas hacia adentro para no encimarse con su marco.
-    return calcularDiseno(t.Filas(), t.Columnas(), areaDeCartas(), RELACION_CARTA);
+    return calcularDiseno(t.Filas(), t.Columnas(), areaDeCartas(), RELACION_CARTA,
+                          DIFICULTADES[configActual.dificultad].huecoX);
 }
 
 //***********************************************
 // ARTE DEL MARCADOR
 //***********************************************
 
-// El liston de arriba: toda la franja del marcador, 1280x140, de y = 0 hasta
-// donde empieza el tapete. Trae dibujada la palabra "GATORAMA", asi que con el
-// arte el titulo ya no se escribe con codigo. Encima van los botones, los
-// recuadros de los jugadores y la linea del tiempo.
+// El liston de arriba, con la palabra "GATORAMA" dibujada: con el arte, el titulo
+// ya no se escribe con codigo. Va centrado arriba, entre el boton de pausa y el
+// engrane, y se reduce a 76 de alto para que sus colas no pisen los recuadros de
+// los jugadores, que empiezan en y = 74.
 static const char* RUTA_LISTON = "recursos/listonJuego.png";
 
 static Texture2D texturaListon;
@@ -80,6 +81,23 @@ static bool      hayListon = false;
 void CargarTexturasJuego()
 {
     hayListon = cargarTexturaSiEsta(RUTA_LISTON, &texturaListon);
+
+    // Se dibuja mas chico que el archivo: sin mipmaps, reducirlo se ve dentado.
+    if(hayListon){
+        GenTextureMipmaps(&texturaListon);
+        SetTextureFilter(texturaListon, TEXTURE_FILTER_TRILINEAR);
+    }
+}
+
+/**
+ * \brief D&oacute;nde va el list&oacute;n: centrado arriba, 76 de alto, con su proporci&oacute;n.
+ */
+static Rectangle zonaListon()
+{
+    const float ALTO  = 76.0f;
+    float       ancho = ALTO * texturaListon.width / (float)texturaListon.height;
+
+    return rectangulo((GetScreenWidth() - ancho) / 2.0f, 0.0f, ancho, ALTO);
 }
 
 void DescargarTexturasJuego()
@@ -417,7 +435,12 @@ static void dibujarBloqueJugador(int jugador)
 static void dibujarMarcador()
 {
     // El liston va primero: todo lo demas del marcador se dibuja encima.
-    if(hayListon) DrawTexture(texturaListon, 0, 0, WHITE);
+    if(hayListon){
+        Rectangle origen  = { 0.0f, 0.0f, (float)texturaListon.width, (float)texturaListon.height };
+        Vector2   desfase = { 0.0f, 0.0f };
+
+        DrawTexturePro(texturaListon, origen, zonaListon(), desfase, 0.0f, WHITE);
+    }
 
     dibujarBotonPausa(botonDePausa());
     dibujarBotonOpciones(botonDeOpciones());

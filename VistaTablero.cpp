@@ -56,7 +56,8 @@ Rectangle areaDeCartas()
     return area;
 }
 
-DisenoTablero calcularDiseno(int filas, int columnas, Rectangle area, float relacionAspecto)
+DisenoTablero calcularDiseno(int filas, int columnas, Rectangle area, float relacionAspecto,
+                             float huecoX)
 {
     DisenoTablero diseno;
     diseno.filas    = filas;
@@ -99,12 +100,19 @@ DisenoTablero calcularDiseno(int filas, int columnas, Rectangle area, float rela
     float sobraY = celdaAlto  - diseno.altoCarta;
     diseno.separacion = (sobraX < sobraY) ? sobraX : sobraY;
 
-    diseno.pasoX = diseno.anchoCarta + diseno.separacion;
+    // Paso 4b: a lo ancho se puede abrir mas, si la dificultad lo pide y si sobra.
+    // En Normal, 6 columnas dejan mucho espacio a los lados; abrir el hueco entre
+    // columnas reparte las cartas por el tapete en vez de amontonarlas al centro.
+    // Nunca pasa de lo que sobra en la celda, asi que no se puede desbordar.
+    diseno.separacionX = diseno.separacion * huecoX;
+    if(diseno.separacionX > sobraX) diseno.separacionX = sobraX;
+
+    diseno.pasoX = diseno.anchoCarta + diseno.separacionX;
     diseno.pasoY = diseno.altoCarta  + diseno.separacion;
 
     // Paso 5: como se apreto la separacion, el bloque de cartas ya no llena el
     // area. Se centra: la ultima carta no lleva separacion despues, por eso se resta.
-    float anchoBloque = columnas * diseno.pasoX - diseno.separacion;
+    float anchoBloque = columnas * diseno.pasoX - diseno.separacionX;
     float altoBloque  = filas    * diseno.pasoY - diseno.separacion;
 
     diseno.origenX = area.x + (area.width  - anchoBloque) / 2.0f;
