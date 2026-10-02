@@ -293,6 +293,102 @@ static void activarControl(int control)
     }
 }
 
+//***********************************************
+// NAVEGACION CON FLECHAS
+//***********************************************
+
+// Los controles acomodados como se ven: cuatro renglones, cada uno con su primer
+// indice y cuantos tiene. Arriba y abajo cambian de renglon; izquierda y derecha
+// se mueven dentro de el. Antes se recorrian como una sola lista, y "arriba" en un
+// boton de la derecha brincaba al de su izquierda.
+//
+//   renglon 0:  Solo  1 vs 1
+//   renglon 1:  Facil  Normal  Dificil
+//   renglon 2:  Puntos  Racha  Pares  Tiempo
+//   renglon 3:  Volver al menu
+static const int PRIMERO_DEL_RENGLON[4] = { CTRL_MODO, CTRL_NIVEL, CTRL_COLUMNA, CTRL_VOLVER };
+static const int CUANTOS_EN_RENGLON[4]  = { 2, NUM_DIFICULTADES, NUM_COLUMNAS_ORDEN, 1 };
+static const int NUM_RENGLONES          = 4;
+
+static int renglonDe(int control)
+{
+    for(int r = NUM_RENGLONES - 1; r >= 0; r--){
+        if(control >= PRIMERO_DEL_RENGLON[r]) return r;
+    }
+
+    return 0;
+}
+
+/**
+ * \brief El control de un rengl&oacute;n que queda m&aacute;s cerca, en horizontal, de un punto.
+ *
+ * Es lo que hace que bajar desde "1 vs 1" caiga en "Normal" o "Dificil" -los que
+ * est&aacute;n debajo- y no siempre en el primero del rengl&oacute;n.
+ */
+static int masCercanoEn(int renglon, float x)
+{
+    int   mejor     = PRIMERO_DEL_RENGLON[renglon];
+    float distancia = 1e9f;
+
+    for(int i = 0; i < CUANTOS_EN_RENGLON[renglon]; i++){
+        int       control = PRIMERO_DEL_RENGLON[renglon] + i;
+        Rectangle zona    = zonaControl(control);
+        float     d       = zona.x + zona.width / 2.0f - x;
+
+        if(d < 0) d = -d;
+
+        if(d < distancia){
+            distancia = d;
+            mejor     = control;
+        }
+    }
+
+    return mejor;
+}
+
+/**
+ * \brief Mueve el enfoque con las flechas, como en una cuadr&iacute;cula.
+ */
+static void moverEnfoquePuntajes()
+{
+    bool arriba    = IsKeyPressed(KEY_UP);
+    bool abajo     = IsKeyPressed(KEY_DOWN);
+    bool izquierda = IsKeyPressed(KEY_LEFT);
+    bool derecha   = IsKeyPressed(KEY_RIGHT);
+
+    if(!arriba && !abajo && !izquierda && !derecha) return;
+
+    // La primera flecha estrena el enfoque: hacia arriba en "Volver", con
+    // cualquier otra en el filtro que esta elegido ahorita.
+    if(enfoque == SIN_ENFOQUE){
+        enfoque = arriba ? CTRL_VOLVER
+                         : CTRL_MODO + ((modoFiltro == Modo_multijugador) ? 1 : 0);
+        return;
+    }
+
+    int renglon = renglonDe(enfoque);
+
+    if(arriba || abajo){
+        Rectangle actual  = zonaControl(enfoque);
+        float     centroX = actual.x + actual.width / 2.0f;
+
+        // Arriba del todo se pasa a "Volver" y al reves: da la vuelta.
+        int nuevo = (renglon + (abajo ? 1 : -1) + NUM_RENGLONES) % NUM_RENGLONES;
+
+        enfoque = masCercanoEn(nuevo, centroX);
+        return;
+    }
+
+    // Dentro del renglon, tambien da la vuelta.
+    int primero = PRIMERO_DEL_RENGLON[renglon];
+    int cuantos = CUANTOS_EN_RENGLON[renglon];
+    int i       = enfoque - primero;
+
+    i = (i + (derecha ? 1 : -1) + cuantos) % cuantos;
+
+    enfoque = primero + i;
+}
+
 Escena_Estado ActualizarPuntajes()
 {
     // Con la ventana de opciones abierta, ella se queda con toda la entrada: el
@@ -320,17 +416,7 @@ Escena_Estado ActualizarPuntajes()
         enfoque = controlBajoElRaton();
     }
 
-    bool adelante = IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_RIGHT);
-    bool atras    = IsKeyPressed(KEY_UP)   || IsKeyPressed(KEY_LEFT);
-
-    if(enfoque == SIN_ENFOQUE){
-        // La primera flecha estrena el enfoque: hacia adelante por el primer
-        // filtro, hacia atras por "Volver".
-        if(adelante)   enfoque = CTRL_MODO;
-        else if(atras) enfoque = CTRL_VOLVER;
-    } else {
-        enfoque = moverEnfoque(enfoque, NUM_CONTROLES, true);
-    }
+    moverEnfoquePuntajes();
 
     if(enfoqueActivado() && enfoque != SIN_ENFOQUE){
         if(enfoque == CTRL_VOLVER) return Escena_menu;
@@ -527,9 +613,6 @@ void DibujarPuntajes()
         }
     }
 
-    // Sobre el pergamino, en cafe medio: el gris de COLOR_TENUE casi no se leia.
-    dibujarTextoCentrado("Clic o flechas y Enter en Puntos, Racha, Pares o Tiempo para reordenar",
-                         612, 16, hayFondo ? Color{ 104, 80, 54, 255 } : COLOR_TENUE);
 
     if(hayFondo) marcarPlaca(botonVolver(), false, enfoque == CTRL_VOLVER);
     else         dibujarBoton(botonVolver(), "Volver al menu", enfoque == CTRL_VOLVER);

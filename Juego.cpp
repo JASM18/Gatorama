@@ -78,15 +78,40 @@ static const char* RUTA_LISTON = "recursos/listonJuego.png";
 static Texture2D texturaListon;
 static bool      hayListon = false;
 
+// Las placas de los recuadros de jugador, al doble del recuadro (660x124 para uno
+// de 330x62). En 1 vs 1, la activa es la del jugador en turno -ya trae "Tu Turno"
+// escrito- y la desactivada la del que espera. En solitario va su propia placa,
+// del color de la activa pero sin el letrero: no hay a quien pasarle el turno.
+static const char* RUTA_TURNO_ACTIVO    = "recursos/tuTurnoActivo.png";
+static const char* RUTA_TURNO_DESACTIVO = "recursos/tuTurnoDesactivo.png";
+static const char* RUTA_TURNO_SOLITARIO = "recursos/tuTurnoSolitario.png";
+
+static Texture2D texturaTurnoActivo;
+static Texture2D texturaTurnoDesactivo;
+static Texture2D texturaTurnoSolitario;
+
+static bool hayTurnoActivo    = false;
+static bool hayTurnoDesactivo = false;
+static bool hayTurnoSolitario = false;
+
+/** \brief Carga una placa que se dibuja reducida, con mipmaps para que no se vea dentada. */
+static bool cargarReducida(const char* ruta, Texture2D* destino)
+{
+    if(!cargarTexturaSiEsta(ruta, destino)) return false;
+
+    GenTextureMipmaps(destino);
+    SetTextureFilter(*destino, TEXTURE_FILTER_TRILINEAR);
+
+    return true;
+}
+
 void CargarTexturasJuego()
 {
-    hayListon = cargarTexturaSiEsta(RUTA_LISTON, &texturaListon);
-
-    // Se dibuja mas chico que el archivo: sin mipmaps, reducirlo se ve dentado.
-    if(hayListon){
-        GenTextureMipmaps(&texturaListon);
-        SetTextureFilter(texturaListon, TEXTURE_FILTER_TRILINEAR);
-    }
+    // Las tres se dibujan mas chicas que el archivo.
+    hayListon         = cargarReducida(RUTA_LISTON,          &texturaListon);
+    hayTurnoActivo    = cargarReducida(RUTA_TURNO_ACTIVO,    &texturaTurnoActivo);
+    hayTurnoDesactivo = cargarReducida(RUTA_TURNO_DESACTIVO, &texturaTurnoDesactivo);
+    hayTurnoSolitario = cargarReducida(RUTA_TURNO_SOLITARIO, &texturaTurnoSolitario);
 }
 
 /**
@@ -102,9 +127,15 @@ static Rectangle zonaListon()
 
 void DescargarTexturasJuego()
 {
-    if(hayListon) UnloadTexture(texturaListon);
+    if(hayListon)         UnloadTexture(texturaListon);
+    if(hayTurnoActivo)    UnloadTexture(texturaTurnoActivo);
+    if(hayTurnoDesactivo) UnloadTexture(texturaTurnoDesactivo);
+    if(hayTurnoSolitario) UnloadTexture(texturaTurnoSolitario);
 
-    hayListon = false;
+    hayListon         = false;
+    hayTurnoActivo    = false;
+    hayTurnoDesactivo = false;
+    hayTurnoSolitario = false;
 }
 
 /**
@@ -211,8 +242,9 @@ void LiberarPartida()
 /**
  * \brief Mueve la carta resaltada con las flechas del teclado.
  *
- * Se topa en los bordes en lugar de dar la vuelta: en un tablero de 3x10, saltar
- * de la ultima carta a la primera desorienta m&aacute;s de lo que ayuda.
+ * Da la vuelta en los bordes: a la derecha de la &uacute;ltima columna est&aacute; la primera,
+ * y abajo del &uacute;ltimo rengl&oacute;n est&aacute; el primero, en la misma columna o fila. As&iacute; se
+ * llega a cualquier carta sin tener que recorrer el tablero entero.
  */
 static void moverConFlechas()
 {
@@ -238,10 +270,10 @@ static void moverConFlechas()
     int fila    = cartaResaltada / columnas + pasoY;
     int columna = cartaResaltada % columnas + pasoX;
 
-    if(fila < 0)              fila = 0;
-    if(fila >= t.Filas())     fila = t.Filas() - 1;
-    if(columna < 0)           columna = 0;
-    if(columna >= columnas)   columna = columnas - 1;
+    // Se suma el total antes del residuo porque en C++ el residuo de un negativo
+    // es negativo: -1 % 6 da -1, no 5.
+    fila    = (fila    + t.Filas()) % t.Filas();
+    columna = (columna + columnas)  % columnas;
 
     cartaResaltada = fila * columnas + columna;
 }
@@ -397,11 +429,6 @@ static void dibujarBloqueJugador(int jugador)
     // nada: solo seria ruido. El recuadro se dibuja liso.
     bool marcarTurno = esSuTurno && partida->NumJugadores() > 1;
 
-    if(marcarTurno){
-        DrawRectangleRounded(rec, 0.18f, 8, COLOR_BOTON);
-        DrawRectangleRoundedLinesEx(rec, 0.18f, 8, 3.0f, COLOR_BOTON_ACTIVO);
-    }
-
     const char* nombre = nombreDeJugador(configActual, jugador + 1);
     const char* marcas = TextFormat("Pares %d    Puntos %d    Racha %d",
                                     partida->ParesDe(jugador),
@@ -409,6 +436,33 @@ static void dibujarBloqueJugador(int jugador)
                                     partida->RachaDe(jugador));
 
     int x = (int)rec.x + 14;
+
+    if(hayTurnoActivo && hayTurnoDesactivo){
+
+        // Con el arte, cada recuadro va sobre su placa. "Tu Turno" ya viene escrito
+        // en la activa, arriba a la derecha.
+        bool      solo    = (partida->NumJugadores() == 1);
+        Texture2D placa   = marcarTurno ? texturaTurnoActivo : texturaTurnoDesactivo;
+
+        if(solo && hayTurnoSolitario) placa = texturaTurnoSolitario;
+
+        // En solitario el nombre va en morado, como el del que tiene el turno: la
+        // placa amarilla es la misma familia.
+        bool nombreMorado = marcarTurno || (solo && hayTurnoSolitario);
+        Rectangle origen  = { 0.0f, 0.0f, (float)placa.width, (float)placa.height };
+        Vector2   desfase = { 0.0f, 0.0f };
+
+        DrawTexturePro(placa, origen, rec, desfase, 0.0f, WHITE);
+
+        dibujarDato(nombre, x, (int)rec.y + 5,  26, nombreMorado ? COLOR_BOTON_ACTIVO : COLOR_TEXTO);
+        dibujarDato(marcas, x, (int)rec.y + 36, 20, COLOR_TEXTO);
+        return;
+    }
+
+    if(marcarTurno){
+        DrawRectangleRounded(rec, 0.18f, 8, COLOR_BOTON);
+        DrawRectangleRoundedLinesEx(rec, 0.18f, 8, 3.0f, COLOR_BOTON_ACTIVO);
+    }
 
     if(marcarTurno){
         // Sobre el recuadro claro, los colores de siempre.

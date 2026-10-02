@@ -83,6 +83,29 @@ const int NADA_ELEGIDO = -1;
 // modo: ese se lee directo de config.modo, ver mas abajo.
 static int enfoque = SIN_ENFOQUE;
 
+// Los controles del primer paso, acomodados en renglones como se ven en pantalla:
+//
+//   renglon 0:  Solitario   1 vs 1
+//   renglon 1:  Nombre 1   (Nombre 2, solo en 1 vs 1)
+//   renglon 2:  Siguiente
+//   renglon 3:  Atras
+//
+// Arriba y abajo cambian de renglon; izquierda y derecha se mueven dentro de el.
+const int CTRL_SOLO      = 0;
+const int CTRL_VS        = 1;
+const int CTRL_NOMBRE1   = 2;
+const int CTRL_NOMBRE2   = 3;
+const int CTRL_SIGUIENTE = 4;
+const int CTRL_ATRAS     = 5;
+const int NUM_RENGLONES  = 4;
+
+// En el paso de dificultad, las tres tarjetas son 0, 1 y 2, y Atras va despues.
+const int CTRL_ATRAS_DIFICULTAD = NUM_DIFICULTADES;
+
+// La ultima tarjeta en la que estuvo el enfoque, para volver a ella al subir desde
+// Atras en vez de caer siempre en Facil.
+static int ultimaTarjeta = 0;
+
 // En 1 vs 1 hay dos campos de nombre a la vista a la vez, asi que hace falta saber
 // en cual se esta escribiendo: 0 es el jugador 1, 1 es el jugador 2. Con un solo
 // campo (solitario) esto no se usa. Clic en un campo lo activa; TAB alterna.
@@ -357,8 +380,9 @@ static void escribirEn(char* destino)
 static void irAPaso(PasoConfiguracion nuevo)
 {
     pasoActual  = nuevo;
-    enfoque     = SIN_ENFOQUE;
-    campoActivo = 0;
+    enfoque       = SIN_ENFOQUE;
+    campoActivo   = 0;
+    ultimaTarjeta = 0;
 
     // Si se cambia de paso con el retroceso apretado, la cuenta arranca de cero en
     // el siguiente campo y no le borra de golpe lo que ya llevaba.
@@ -377,32 +401,14 @@ void PrepararConfiguracion(ConfigPartida& config)
     // se empieza por el primer paso; la configuracion no se recuerda.
     config = configPorDefecto();
 
+    // Los campos arrancan vacios: el nombre por omision ("Player 1") se ve tenue
+    // como pista, y si se deja asi, nombreDeJugador lo pone al jugar. Si viniera ya
+    // escrito, lo que teclea el nino se pegaria detras: "Player 1Ana".
+    config.nombre1[0] = '\0';
+    config.nombre2[0] = '\0';
+
     irAPaso(Paso_modoYnombre);
     enOpciones = false;
-}
-
-/**
- * \brief Mueve el enfoque entre las opciones de una lista con las flechas.
- *
- * \param cantidad Cuantas opciones tiene el paso.
- */
-static void moverEnfoqueLista(int cantidad)
-{
-    int salto = 0;
-
-    if(IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_RIGHT)) salto =  1;
-    if(IsKeyPressed(KEY_UP)   || IsKeyPressed(KEY_LEFT))  salto = -1;
-
-    if(salto == 0) return;
-
-    // La primera flecha estrena el enfoque sin saltarse nada: hacia adelante entra
-    // por la primera opcion, hacia atras por la ultima.
-    if(enfoque == SIN_ENFOQUE){
-        enfoque = (salto > 0) ? 0 : cantidad - 1;
-        return;
-    }
-
-    enfoque = (enfoque + salto + cantidad) % cantidad;
 }
 
 /**
@@ -428,7 +434,8 @@ static int actualizarLista(int cantidad, Rectangle (*rectDe)(int))
         }
     }
 
-    moverEnfoqueLista(cantidad);
+    // Las flechas las atiende quien llama (moverEnfoqueDificultad), porque ahi el
+    // renglon de tarjetas tiene debajo el boton Atras.
 
     // Un clic elige, y ademas se lleva el enfoque.
     for(int i = 0; i < cantidad; i++){
@@ -438,9 +445,135 @@ static int actualizarLista(int cantidad, Rectangle (*rectDe)(int))
         }
     }
 
-    if(IsKeyPressed(KEY_ENTER) && enfoque != SIN_ENFOQUE) return enfoque;
+    // Solo cuenta si el enfoque esta en una de las opciones: Atras se atiende aparte.
+    if(IsKeyPressed(KEY_ENTER) && enfoque >= 0 && enfoque < cantidad) return enfoque;
 
     return NADA_ELEGIDO;
+}
+
+/**
+ * \brief En qu&eacute; rengl&oacute;n est&aacute; un control del primer paso.
+ */
+static int renglonDe(int control)
+{
+    if(control == CTRL_SOLO    || control == CTRL_VS)      return 0;
+    if(control == CTRL_NOMBRE1 || control == CTRL_NOMBRE2) return 1;
+    if(control == CTRL_SIGUIENTE)                          return 2;
+
+    return 3;
+}
+
+/**
+ * \brief El control al que se llega al entrar a un rengl&oacute;n con las flechas.
+ *
+ * En los escudos, el del modo que est&aacute; elegido; en los nombres, el que estaba
+ * recibiendo el teclado. As&iacute; subir y bajar nunca cambia nada por s&iacute; solo.
+ */
+static int entradaDeRenglon(int renglon, const ConfigPartida& config)
+{
+    if(renglon == 0) return (config.modo == Modo_multijugador) ? CTRL_VS : CTRL_SOLO;
+
+    if(renglon == 1){
+        bool dos = (config.modo == Modo_multijugador);
+        return (dos && campoActivo == 1) ? CTRL_NOMBRE2 : CTRL_NOMBRE1;
+    }
+
+    return (renglon == 2) ? CTRL_SIGUIENTE : CTRL_ATRAS;
+}
+
+/**
+ * \brief Qu&eacute; control del primer paso est&aacute; bajo el puntero, o SIN_ENFOQUE.
+ */
+static int controlBajoElRatonModo(const ConfigPartida& config)
+{
+    if(ratonEncima(tarjetaModo(0))) return CTRL_SOLO;
+    if(ratonEncima(tarjetaModo(1))) return CTRL_VS;
+
+    if(config.modo == Modo_multijugador){
+        if(ratonEncima(campoNombreDoble(0))) return CTRL_NOMBRE1;
+        if(ratonEncima(campoNombreDoble(1))) return CTRL_NOMBRE2;
+    } else {
+        if(ratonEncima(campoNombreGrande())) return CTRL_NOMBRE1;
+    }
+
+    if(ratonEncima(botonSiguiente())) return CTRL_SIGUIENTE;
+    if(ratonEncima(botonAtras()))     return CTRL_ATRAS;
+
+    return SIN_ENFOQUE;
+}
+
+/**
+ * \brief Mueve el enfoque del primer paso con las flechas.
+ *
+ * Izquierda y derecha sobre los escudos tambi&eacute;n cambian el modo -es un
+ * interruptor, como antes-; sobre los nombres en 1 vs 1, cambian de pergamino.
+ */
+static void moverEnfoqueModo(ConfigPartida& config)
+{
+    bool arriba = IsKeyPressed(KEY_UP);
+    bool abajo  = IsKeyPressed(KEY_DOWN);
+    bool lado   = IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_RIGHT);
+
+    if(!arriba && !abajo && !lado) return;
+
+    // La primera flecha estrena el enfoque: en el escudo del modo elegido, o en
+    // Atras si fue hacia arriba.
+    if(enfoque == SIN_ENFOQUE){
+        enfoque = arriba ? CTRL_ATRAS : entradaDeRenglon(0, config);
+        return;
+    }
+
+    if(lado){
+        int renglon = renglonDe(enfoque);
+
+        if(renglon == 0){
+            config.modo = (config.modo == Modo_solitario) ? Modo_multijugador : Modo_solitario;
+            enfoque     = (config.modo == Modo_multijugador) ? CTRL_VS : CTRL_SOLO;
+        }
+        else if(renglon == 1 && config.modo == Modo_multijugador){
+            enfoque = (enfoque == CTRL_NOMBRE1) ? CTRL_NOMBRE2 : CTRL_NOMBRE1;
+        }
+    }
+
+    if(arriba || abajo){
+        int paso    = abajo ? 1 : -1;
+        int renglon = (renglonDe(enfoque) + paso + NUM_RENGLONES) % NUM_RENGLONES;
+
+        enfoque = entradaDeRenglon(renglon, config);
+    }
+}
+
+/**
+ * \brief Mueve el enfoque del paso de dificultad: tarjetas en un rengl&oacute;n y Atras
+ *        debajo.
+ */
+static void moverEnfoqueDificultad()
+{
+    bool arriba    = IsKeyPressed(KEY_UP);
+    bool abajo     = IsKeyPressed(KEY_DOWN);
+    bool izquierda = IsKeyPressed(KEY_LEFT);
+    bool derecha   = IsKeyPressed(KEY_RIGHT);
+
+    if(!arriba && !abajo && !izquierda && !derecha) return;
+
+    if(enfoque == SIN_ENFOQUE){
+        enfoque = arriba ? CTRL_ATRAS_DIFICULTAD : 0;
+        return;
+    }
+
+    if(enfoque == CTRL_ATRAS_DIFICULTAD){
+        // Desde Atras, cualquier flecha menos abajo regresa a las tarjetas.
+        if(!abajo) enfoque = ultimaTarjeta;
+        return;
+    }
+
+    if(abajo){
+        enfoque = CTRL_ATRAS_DIFICULTAD;
+        return;
+    }
+
+    if(izquierda) enfoque = (enfoque + NUM_DIFICULTADES - 1) % NUM_DIFICULTADES;
+    if(derecha)   enfoque = (enfoque + 1) % NUM_DIFICULTADES;
 }
 
 Escena_Estado ActualizarConfiguracion(ConfigPartida& config)
@@ -461,7 +594,11 @@ Escena_Estado ActualizarConfiguracion(ConfigPartida& config)
 
     // ESC y el boton Atras hacen lo mismo. Con solo dos pasos, "el anterior"
     // siempre es Paso_modoYnombre; desde ahi, al menu.
-    if(IsKeyPressed(KEY_ESCAPE) || botonClicado(botonAtras())){
+    bool enterEnAtras = IsKeyPressed(KEY_ENTER) &&
+                        ((pasoActual == Paso_modoYnombre && enfoque == CTRL_ATRAS) ||
+                         (pasoActual == Paso_dificultad  && enfoque == CTRL_ATRAS_DIFICULTAD));
+
+    if(IsKeyPressed(KEY_ESCAPE) || botonClicado(botonAtras()) || enterEnAtras){
 
         if(pasoActual == Paso_modoYnombre) return Escena_menu;
 
@@ -473,33 +610,62 @@ Escena_Estado ActualizarConfiguracion(ConfigPartida& config)
 
         case Paso_modoYnombre:
         {
-            // El modo es un interruptor, no una lista que se "confirma": tocar una
-            // tarjeta o mover las flechas cambia cual esta elegida sin salir de la
-            // pantalla, porque todavia falta escribir el/los nombres aqui mismo.
-            // Por eso NO pasa por actualizarLista, que si haria avanzar con ENTER.
-            if(IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_RIGHT)){
-                config.modo = (config.modo == Modo_solitario) ? Modo_multijugador : Modo_solitario;
-            }
-            if(botonClicado(tarjetaModo(0))) config.modo = Modo_solitario;
-            if(botonClicado(tarjetaModo(1))) config.modo = Modo_multijugador;
+            // El raton solo cuenta cuando de verdad se movio. Si se esta escribiendo
+            // un nombre, hacerlo a un lado para no tapar las letras no suelta el
+            // pergamino: se suelta al pasar por otro control.
+            Vector2 movimientoRaton = GetMouseDelta();
 
-            if(config.modo == Modo_multijugador){
+            if(movimientoRaton.x != 0.0f || movimientoRaton.y != 0.0f){
+                int  bajo        = controlBajoElRatonModo(config);
+                bool escribiendo = (enfoque == CTRL_NOMBRE1 || enfoque == CTRL_NOMBRE2);
 
-                // Dos campos a la vista: un clic en uno lo activa, TAB alterna.
-                // Solo el activo recibe lo que se teclee.
-                if(botonClicado(campoNombreDoble(0))) campoActivo = 0;
-                if(botonClicado(campoNombreDoble(1))) campoActivo = 1;
-                if(IsKeyPressed(KEY_TAB))             campoActivo = 1 - campoActivo;
-
-                escribirEn(campoActivo == 0 ? config.nombre1 : config.nombre2);
-
-            } else {
-                escribirEn(config.nombre1);
+                if(bajo != SIN_ENFOQUE || !escribiendo) enfoque = bajo;
             }
 
-            // ENTER es lo unico que de verdad avanza: asi nunca se sale de la
-            // pantalla a medio escribir un nombre.
-            if(IsKeyPressed(KEY_ENTER) || botonClicado(botonSiguiente())){
+            moverEnfoqueModo(config);
+
+            // El modo es un interruptor, no una lista que se "confirma": tocar un
+            // escudo lo elige sin salir de la pantalla, porque todavia falta
+            // escribir el/los nombres aqui mismo.
+            if(botonClicado(tarjetaModo(0))){ config.modo = Modo_solitario;    enfoque = CTRL_SOLO; }
+            if(botonClicado(tarjetaModo(1))){ config.modo = Modo_multijugador; enfoque = CTRL_VS; }
+
+            bool dos = (config.modo == Modo_multijugador);
+
+            if(dos){
+                if(botonClicado(campoNombreDoble(0))){ campoActivo = 0; enfoque = CTRL_NOMBRE1; }
+                if(botonClicado(campoNombreDoble(1))){ campoActivo = 1; enfoque = CTRL_NOMBRE2; }
+
+                // TAB alterna, como siempre.
+                if(IsKeyPressed(KEY_TAB)){
+                    campoActivo = 1 - campoActivo;
+                    enfoque     = (campoActivo == 0) ? CTRL_NOMBRE1 : CTRL_NOMBRE2;
+                }
+            } else if(botonClicado(campoNombreGrande())){
+                enfoque = CTRL_NOMBRE1;
+            }
+
+            // Con el enfoque en un pergamino, ese es el que recibe el teclado. En
+            // solitario solo hay uno.
+            if(enfoque == CTRL_NOMBRE1) campoActivo = 0;
+            if(enfoque == CTRL_NOMBRE2) campoActivo = 1;
+            if(!dos)                    campoActivo = 0;
+
+            // Se puede escribir en cualquier momento, aunque el enfoque este en
+            // otro control: lo tecleado va al pergamino activo. Asi el nino que
+            // llega y escribe su nombre no tiene que saber nada de flechas.
+            escribirEn(campoActivo == 0 ? config.nombre1 : config.nombre2);
+
+            if(IsKeyPressed(KEY_ENTER)){
+
+                // Enter sobre un escudo elige ese modo; en cualquier otro lugar
+                // (un nombre, Siguiente, o nada) avanza. Sobre Atras ya se atendio
+                // arriba.
+                if(enfoque == CTRL_SOLO)     config.modo = Modo_solitario;
+                else if(enfoque == CTRL_VS)  config.modo = Modo_multijugador;
+                else                         irAPaso(Paso_dificultad);
+
+            } else if(botonClicado(botonSiguiente())){
                 irAPaso(Paso_dificultad);
             }
             break;
@@ -509,7 +675,18 @@ Escena_Estado ActualizarConfiguracion(ConfigPartida& config)
         {
             // Ultimo paso: elegir una dificultad ya arranca la partida, sin
             // pantalla de resumen de por medio.
+            moverEnfoqueDificultad();
+
+            // Si el raton se mueve sobre Atras, tambien se lleva el enfoque.
+            Vector2 movimientoRaton = GetMouseDelta();
+
             int elegido = actualizarLista(NUM_DIFICULTADES, tarjetaDificultad);
+
+            if((movimientoRaton.x != 0.0f || movimientoRaton.y != 0.0f) && ratonEncima(botonAtras())){
+                enfoque = CTRL_ATRAS_DIFICULTAD;
+            }
+
+            if(enfoque >= 0 && enfoque < NUM_DIFICULTADES) ultimaTarjeta = enfoque;
 
             if(elegido != NADA_ELEGIDO){
                 config.dificultad = (Dificultad)elegido;
@@ -727,13 +904,14 @@ static void dibujarPasoModoConArte(const ConfigPartida& config)
 
     DrawTexture(dos ? texturaDosJugadores : texturaUnJugador, 0, 0, WHITE);
 
-    // El escudo del modo elegido se aclara; el otro, solo si el raton esta encima.
+    // El escudo del modo elegido se aclara; con el enfoque encima, un poco mas.
     for(int i = 0; i < 2; i++){
-        bool elegido = (i == 0) ? !dos : dos;
-        Rectangle escudo = tarjetaModo(i);
+        bool      elegido    = (i == 0) ? !dos : dos;
+        bool      conEnfoque = (enfoque == ((i == 0) ? CTRL_SOLO : CTRL_VS));
+        Rectangle escudo     = tarjetaModo(i);
 
-        if(elegido)                  aclararZona(escudo, 0.22f);
-        else if(ratonEncima(escudo)) aclararZona(escudo, 0.10f);
+        if(elegido)         aclararZona(escudo, conEnfoque ? 0.32f : 0.22f);
+        else if(conEnfoque) aclararZona(escudo, 0.12f);
     }
 
     if(dos){
@@ -752,12 +930,14 @@ static void dibujarPasoModoConArte(const ConfigPartida& config)
     } else {
         Rectangle campo = campoNombreGrande();
 
+        if(enfoque == CTRL_NOMBRE1) aclararZona(campo, 0.35f);
+
         dibujarNombreEnPergamino(config.nombre1, nombreDeJugador(config, 1),
                                  (int)campo.x + 24, (int)(campo.y + (campo.height - 40.0f) / 2.0f),
                                  40, true);
     }
 
-    marcarPlaca(botonSiguiente(), false, ratonEncima(botonSiguiente()));
+    marcarPlaca(botonSiguiente(), false, enfoque == CTRL_SIGUIENTE);
 }
 
 /**
@@ -801,7 +981,10 @@ static void dibujarPasoModoYNombre(const ConfigPartida& config)
 
     dibujarBotonAccion(siguiente, "Siguiente", color);
 
-    if(ratonEncima(siguiente)) dibujarAnilloEnfoque(siguiente);
+    if(enfoque == CTRL_SIGUIENTE) dibujarAnilloEnfoque(siguiente);
+
+    if(enfoque == CTRL_SOLO) dibujarAnilloEnfoque(tarjetaModo(0));
+    if(enfoque == CTRL_VS)   dibujarAnilloEnfoque(tarjetaModo(1));
 }
 
 static void dibujarPasoDificultad()
@@ -809,7 +992,8 @@ static void dibujarPasoDificultad()
     if(hayDificultad){
         DrawTexture(texturaDificultad, 0, 0, WHITE);
 
-        if(enfoque != SIN_ENFOQUE) aclararZona(tarjetaDificultad(enfoque), 0.30f);
+        // El enfoque puede estar en Atras (indice 3), que no es una tarjeta.
+        if(enfoque >= 0 && enfoque < NUM_DIFICULTADES) aclararZona(tarjetaDificultad(enfoque), 0.30f);
         return;
     }
 
@@ -855,10 +1039,15 @@ void DibujarConfiguracion(const ConfigPartida& config)
 
     Rectangle atras = botonAtras();
 
+    bool atrasConEnfoque = (pasoActual == Paso_modoYnombre) ? (enfoque == CTRL_ATRAS)
+                                                            : (enfoque == CTRL_ATRAS_DIFICULTAD);
+
     if(conArte){
-        marcarPlaca(atras, false, ratonEncima(atras));
+        marcarPlaca(atras, false, atrasConEnfoque);
     } else {
-        dibujarBoton(atras, "Atras", ratonEncima(atras));
+        dibujarBoton(atras, "Atras", false);
+
+        if(atrasConEnfoque) dibujarAnilloEnfoque(atras);
 
         dibujarTextoCentradoSobreFondo(ayudaDelPaso(config), GetScreenHeight() - 40, 18, COLOR_FONDO_TENUE);
     }
