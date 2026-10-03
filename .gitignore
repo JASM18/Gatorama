@@ -25,7 +25,6 @@ html/
 latex/
 
 # Archivos de otros editores
-.vscode/
 .idea/
 .vs/
 *.user
