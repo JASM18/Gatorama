@@ -242,15 +242,38 @@ void dibujarTextoCentradoSobreFondo(const char* texto, int y, int tamano, Color 
                            y, tamano, color);
 }
 
-void dibujarDatoSobreFondo(const char* texto, int x, int y, int tamano, Color color)
+/**
+ * \brief dibujarDato con un contorno de un grosor y color dados.
+ */
+static void datoConContorno(const char* texto, int x, int y, int tamano, Color color,
+                            Color contorno, int g)
 {
-    int g = grosorContorno(tamano);
-
     for(int i = 0; i < 8; i++){
-        dibujarDato(texto, x + DX[i] * g, y + DY[i] * g, tamano, COLOR_CONTORNO);
+        dibujarDato(texto, x + DX[i] * g, y + DY[i] * g, tamano, contorno);
     }
 
     dibujarDato(texto, x, y, tamano, color);
+}
+
+void dibujarDatoConContorno(const char* texto, int x, int y, int tamano, Color color, Color contorno)
+{
+    // Al menos 2 px: un contorno de color es parte del estilo, como las letras del
+    // liston, y de 1 px se pierde. El cafe de siempre solo esta para que se lea.
+    int g = grosorContorno(tamano);
+    if(g < 2) g = 2;
+
+    datoConContorno(texto, x, y, tamano, color, contorno, g);
+}
+
+void dibujarDatoCentradoConContorno(const char* texto, int y, int tamano, Color color, Color contorno)
+{
+    dibujarDatoConContorno(texto, (GetScreenWidth() - anchoDato(texto, tamano)) / 2,
+                           y, tamano, color, contorno);
+}
+
+void dibujarDatoSobreFondo(const char* texto, int x, int y, int tamano, Color color)
+{
+    datoConContorno(texto, x, y, tamano, color, COLOR_CONTORNO, grosorContorno(tamano));
 }
 
 void dibujarDatoCentradoSobreFondo(const char* texto, int y, int tamano, Color color)

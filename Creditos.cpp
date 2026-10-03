@@ -97,8 +97,8 @@ Escena_Estado ActualizarCreditos()
         volverEnfocado = ratonEncima(botonVolver());
     }
 
-    if(IsKeyPressed(KEY_UP)   || IsKeyPressed(KEY_DOWN) ||
-       IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_RIGHT)){
+    if(teclaArriba()   || teclaAbajo() ||
+       teclaIzquierda() || teclaDerecha()){
         volverEnfocado = true;
     }
 

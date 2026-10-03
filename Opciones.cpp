@@ -164,8 +164,8 @@ bool ActualizarOpciones()
     bool enBarra = (enfoque != SIN_ENFOQUE && enfoque < NUM_SONIDOS);
 
     if(enfoque == SIN_ENFOQUE){
-        if(IsKeyPressed(KEY_DOWN)) enfoque = 0;
-        if(IsKeyPressed(KEY_UP))   enfoque = CTRL_REGRESAR;
+        if(teclaAbajo()) enfoque = 0;
+        if(teclaArriba())   enfoque = CTRL_REGRESAR;
     } else {
         // Sobre una barra, izquierda y derecha ajustan en vez de cambiar de control.
         enfoque = moverEnfoque(enfoque, NUM_CONTROLES, !enBarra);
@@ -176,8 +176,8 @@ bool ActualizarOpciones()
         // cualquier maquina.
         float paso = 0.6f * GetFrameTime();
 
-        if(IsKeyDown(KEY_RIGHT)) fijarVolumenDe(enfoque, volumenDe(enfoque) + paso);
-        if(IsKeyDown(KEY_LEFT))  fijarVolumenDe(enfoque, volumenDe(enfoque) - paso);
+        if(derechaSostenida()) fijarVolumenDe(enfoque, volumenDe(enfoque) + paso);
+        if(izquierdaSostenida())  fijarVolumenDe(enfoque, volumenDe(enfoque) - paso);
     }
 
     // Las barras se atienden antes que los botones. Si se hiciera al reves, soltar

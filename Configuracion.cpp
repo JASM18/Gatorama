@@ -510,6 +510,8 @@ static int controlBajoElRatonModo(const ConfigPartida& config)
  */
 static void moverEnfoqueModo(ConfigPartida& config)
 {
+    // Solo las flechas, no W A S D: en este paso se escriben los nombres, y una "a"
+    // tecleada moveria el cursor en vez de escribirse.
     bool arriba = IsKeyPressed(KEY_UP);
     bool abajo  = IsKeyPressed(KEY_DOWN);
     bool lado   = IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_RIGHT);
@@ -549,10 +551,11 @@ static void moverEnfoqueModo(ConfigPartida& config)
  */
 static void moverEnfoqueDificultad()
 {
-    bool arriba    = IsKeyPressed(KEY_UP);
-    bool abajo     = IsKeyPressed(KEY_DOWN);
-    bool izquierda = IsKeyPressed(KEY_LEFT);
-    bool derecha   = IsKeyPressed(KEY_RIGHT);
+    // Aqui si valen W A S D: en este paso no se escribe nada.
+    bool arriba    = teclaArriba();
+    bool abajo     = teclaAbajo();
+    bool izquierda = teclaIzquierda();
+    bool derecha   = teclaDerecha();
 
     if(!arriba && !abajo && !izquierda && !derecha) return;
 

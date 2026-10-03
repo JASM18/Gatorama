@@ -78,6 +78,27 @@ float valorDeslizador(Rectangle rec, float valorActual);
 void dibujarDeslizador(Rectangle rec, float valor);
 
 /**
+ * \brief Las direcciones del teclado: cada una acepta la flecha o su letra de W A S D.
+ *
+ * Se preguntan aqu&iacute; y no con IsKeyPressed(KEY_UP) en cada pantalla para que las
+ * dos formas valgan en todo el juego sin tener que acordarse en cada una. Solo son
+ * verdaderas en el fotograma en que se presiona la tecla.
+ *
+ * **Ojo:** donde se escribe un nombre no se pueden usar, porque W A S D son letras.
+ */
+bool teclaArriba();
+bool teclaAbajo();     ///< \copydoc teclaArriba
+bool teclaIzquierda(); ///< \copydoc teclaArriba
+bool teclaDerecha();   ///< \copydoc teclaArriba
+
+/**
+ * \brief Izquierda y derecha mientras se mantengan apretadas (flecha, A o D). Para
+ *        las barras de volumen, que suben mientras se sostiene la tecla.
+ */
+bool izquierdaSostenida();
+bool derechaSostenida(); ///< \copydoc izquierdaSostenida
+
+/**
  * \brief Mueve un &iacute;ndice de enfoque con las flechas del teclado.
  *
  * El enfoque da la vuelta: del &uacute;ltimo control se pasa al primero. Se suma

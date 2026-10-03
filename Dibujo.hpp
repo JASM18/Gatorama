@@ -173,4 +173,15 @@ void dibujarDatoSobreFondo(const char* texto, int x, int y, int tamano, Color co
 /** \brief dibujarDatoCentrado con contorno. */
 void dibujarDatoCentradoSobreFondo(const char* texto, int y, int tamano, Color color);
 
+/**
+ * \brief dibujarDato con un contorno del color que se pida, no el caf&eacute; de siempre.
+ *
+ * Para texto que debe combinar con el arte -por ejemplo, morado con contorno
+ * dorado como las letras del list&oacute;n- en vez de solo leerse sobre la madera.
+ */
+void dibujarDatoConContorno(const char* texto, int x, int y, int tamano, Color color, Color contorno);
+
+/** \brief dibujarDatoConContorno, centrado en la ventana. */
+void dibujarDatoCentradoConContorno(const char* texto, int y, int tamano, Color color, Color contorno);
+
 #endif // DIBUJO_HPP_INCLUDED

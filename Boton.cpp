@@ -134,18 +134,26 @@ void dibujarDeslizador(Rectangle rec, float valor)
 // NAVEGACION POR TECLADO
 //***********************************************
 
+bool teclaArriba()     { return IsKeyPressed(KEY_UP)    || IsKeyPressed(KEY_W); }
+bool teclaAbajo()      { return IsKeyPressed(KEY_DOWN)  || IsKeyPressed(KEY_S); }
+bool teclaIzquierda()  { return IsKeyPressed(KEY_LEFT)  || IsKeyPressed(KEY_A); }
+bool teclaDerecha()    { return IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_D); }
+
+bool izquierdaSostenida() { return IsKeyDown(KEY_LEFT)  || IsKeyDown(KEY_A); }
+bool derechaSostenida()   { return IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D); }
+
 int moverEnfoque(int enfoque, int cuantos, bool conLaterales)
 {
     if(cuantos <= 0) return 0;
 
     int paso = 0;
 
-    if(IsKeyPressed(KEY_DOWN)) paso =  1;
-    if(IsKeyPressed(KEY_UP))   paso = -1;
+    if(teclaAbajo())  paso =  1;
+    if(teclaArriba()) paso = -1;
 
     if(conLaterales){
-        if(IsKeyPressed(KEY_RIGHT)) paso =  1;
-        if(IsKeyPressed(KEY_LEFT))  paso = -1;
+        if(teclaDerecha())   paso =  1;
+        if(teclaIzquierda()) paso = -1;
     }
 
     return ((enfoque + paso) % cuantos + cuantos) % cuantos;

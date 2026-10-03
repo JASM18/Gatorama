@@ -351,10 +351,10 @@ static int masCercanoEn(int renglon, float x)
  */
 static void moverEnfoquePuntajes()
 {
-    bool arriba    = IsKeyPressed(KEY_UP);
-    bool abajo     = IsKeyPressed(KEY_DOWN);
-    bool izquierda = IsKeyPressed(KEY_LEFT);
-    bool derecha   = IsKeyPressed(KEY_RIGHT);
+    bool arriba    = teclaArriba();
+    bool abajo     = teclaAbajo();
+    bool izquierda = teclaIzquierda();
+    bool derecha   = teclaDerecha();
 
     if(!arriba && !abajo && !izquierda && !derecha) return;
 

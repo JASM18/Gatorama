@@ -211,8 +211,8 @@ AccionPausa ActualizarPausa()
     if(enfoque == SIN_ENFOQUE){
         // La primera flecha estrena el enfoque: hacia abajo por la primera barra,
         // hacia arriba por el ultimo boton.
-        if(IsKeyPressed(KEY_DOWN)) enfoque = 0;
-        if(IsKeyPressed(KEY_UP))   enfoque = NUM_ENFOQUES_PAUSA - 1;
+        if(teclaAbajo()) enfoque = 0;
+        if(teclaArriba())   enfoque = NUM_ENFOQUES_PAUSA - 1;
     } else {
         // Sobre una barra, izquierda y derecha ajustan en vez de cambiar de control.
         enfoque = moverEnfoque(enfoque, NUM_ENFOQUES_PAUSA, !enBarra);
@@ -225,8 +225,8 @@ AccionPausa ActualizarPausa()
         // extremo.
         float paso = 0.6f * GetFrameTime();
 
-        if(IsKeyDown(KEY_RIGHT)) fijarVolumenDe(enfoque, volumenDe(enfoque) + paso);
-        if(IsKeyDown(KEY_LEFT))  fijarVolumenDe(enfoque, volumenDe(enfoque) - paso);
+        if(derechaSostenida()) fijarVolumenDe(enfoque, volumenDe(enfoque) + paso);
+        if(izquierdaSostenida())  fijarVolumenDe(enfoque, volumenDe(enfoque) - paso);
     }
 
     // Las barras se atienden antes que los botones. Si se hiciera al reves, soltar

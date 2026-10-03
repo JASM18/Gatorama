@@ -204,8 +204,8 @@ Escena_Estado ActualizarMenu()
     // IsKeyPressed es verdadero SOLO en el fotograma exacto en que la tecla baja.
     // Con IsKeyDown recorreriamos las opciones antes de soltar la tecla, porque
     // el bucle da 60 vueltas por segundo y un toque normal dura varias.
-    bool abajo  = IsKeyPressed(KEY_DOWN);
-    bool arriba = IsKeyPressed(KEY_UP);
+    bool abajo  = teclaAbajo();
+    bool arriba = teclaArriba();
 
     if(opcionSeleccionada == SIN_OPCION){
         // La primera flecha estrena el cursor: hacia abajo en "Jugar", hacia
